@@ -207,6 +207,31 @@ RR.Renderer = (function () {
     var plateQueue = [];
     var pc = 0;        // 1フレームで描いた粒子数（上限 60 の検証用）
     var api = null;
+    var emojiCache = {}; // v4: 絵文字は1度だけ小さな画像に描いて使い回す（毎フレームの文字描画は重い）
+
+    function esprite(ch) {
+      var c = emojiCache[ch];
+      if (c) return c;
+      var F = Math.round(Math.min(160, Math.max(48, (L ? L.emoji : 80)) * dpr));
+      var side = Math.ceil(F * 1.4);
+      c = document.createElement('canvas');
+      c.width = c.height = side;
+      var x = c.getContext('2d');
+      x.font = F + 'px ' + EMOJI_FONT;
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillStyle = '#000';
+      x.fillText(ch, side / 2, side / 2);
+      c.__f = F;
+      emojiCache[ch] = c;
+      return c;
+    }
+    // 絵文字 ch を、中心 (x, y)・文字サイズ px で描く（fillText と同じ見た目）
+    function drawEmoji(ch, x, y, px) {
+      if (typeof document === 'undefined') { ctx.font = Math.round(px) + 'px ' + EMOJI_FONT; ctx.fillText(ch, x, y); return; }
+      var c = esprite(ch), dw = c.width * px / c.__f;
+      ctx.drawImage(c, x - dw / 2, y - dw / 2, dw, dw);
+    }
 
     function resize() {
       var par = canvas.parentElement;
@@ -255,7 +280,7 @@ RR.Renderer = (function () {
       if (!plan) { L = null; return; }
       var n = plan.n || plan.names.length;
       var top = Math.round(H * 0.08);
-      var bot = Math.round(H * 0.10);
+      var bot = Math.round(H * 0.125);  // v4: 字幕（画面下）と最下段のレーンが重ならない高さ
       var laneH = (H - top - bot) / n;
       var emoji = laneH * 1.0;
       var fs = Math.min(laneH * 0.5, 46);
@@ -292,7 +317,8 @@ RR.Renderer = (function () {
       var cs = Math.max(10, laneH / 3);
       var rightMargin = cs * 2 + Math.max(laneH * 1.0, 56) + 8;
       var x1 = W - rightMargin;
-      L = { cs: cs, n: n, top: top, bot: bot, laneH: laneH, emoji: emoji, fs: fs, labelW: labelW, x0: x0, x1: x1 };
+      L = { cs: cs, n: n, top: top, bot: bot, laneH: laneH, emoji: emoji, fs: fs, labelW: labelW, x0: x0, x1: x1, maxPlate: maxPlate };
+      emojiCache = {};
       buildSprites();
     }
 
@@ -507,10 +533,11 @@ RR.Renderer = (function () {
     }
 
     // 状況 → 表情の種類
-    function faceKind(i, t, ev, rk, tension) {
+    function faceKind(i, t, ev, rk, tension, hidden) {
       var n = L.n;
       var ft = plan.finishTime[i];
       if (t >= ft) {
+        if (hidden) return 'nerv';          // 写真判定の発表待ち（1着・2着とも同じ顔）
         var rank = plan.rankOf[i];
         return rank === 0 ? 'win' : (rank <= 2 ? 'podium' : 'other');
       }
@@ -566,11 +593,7 @@ RR.Renderer = (function () {
         ctx.beginPath(); ctx.ellipse(hs * 0.4, 0, hs * 0.42, hs * 0.12, 0, 0, 6.283); ctx.fill(); ctx.stroke();
         ctx.restore();
       } else {
-        ctx.font = Math.round(hs * 1.05) + 'px ' + EMOJI_FONT;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#000';
-        ctx.fillText(look.hat, 0, -hs * 0.42);
+        drawEmoji(look.hat, 0, -hs * 0.42, hs * 1.05);
       }
     }
 
@@ -592,11 +615,7 @@ RR.Renderer = (function () {
           ctx.save();
           ctx.translate(x, y);
           if (look.trail === 'star' || look.trail === 'spark' || look.trail === 'leaf') ctx.rotate(ph * 4 + j);
-          ctx.font = Math.round(s) + 'px ' + EMOJI_FONT;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = '#000';
-          ctx.fillText(look.trailCh, 0, 0);
+          drawEmoji(look.trailCh, 0, 0, s);
           ctx.restore();
         } else {
           ctx.fillStyle = 'rgba(255,255,255,0.55)';
@@ -610,7 +629,8 @@ RR.Renderer = (function () {
       }
     }
 
-    function drawRunner(i, t, rk, tension) {
+    // rv = 写真判定の発表時刻（レース時計）。-1 なら発表前：1着・2着のバッジ・表情・喜びのポーズを伏せる。undefined なら伏せない
+    function drawRunner(i, t, rk, tension, rv) {
       var lh = L.laneH;
       var yc = L.top + i * lh + lh / 2;
       var p = clamp(plan.progress(i, t), 0, 1);
@@ -628,6 +648,9 @@ RR.Renderer = (function () {
       var fix = vfix();
       var py = plates[i];
       var sinceFin = t - plan.finishTime[i];
+      var hidden = rank <= 1 && rv !== undefined && !(rv >= 0 && t >= rv);
+      var pr2 = hidden ? 1 : rank;             // ポーズ用の順位（発表前は1着も2着と同じ動き）
+      var sinceStamp = rank <= 1 ? (rv >= 0 ? t - rv : (rv === undefined ? sinceFin : -1)) : sinceFin;
 
       // 光の尾 / グロー(boost)
       if (ev.boost) {
@@ -653,10 +676,10 @@ RR.Renderer = (function () {
       var pose;
       if (finished) {
         var fadeIn = ease(sinceFin / 300);
-        if (rank === 0) {
+        if (pr2 === 0) {
           pose = gaitPose('hop', t, look.phase, lh * 1.5, 1);
           pose.dy *= fadeIn; pose.rot = 0.12 * Math.sin(t * 0.0144) * fadeIn;
-        } else if (rank <= 2) {
+        } else if (pr2 <= 2) {
           pose = gaitPose('hop', t, look.phase, lh * 0.9, 1);
           pose.dy *= fadeIn; pose.rot = 0;
         } else {
@@ -688,14 +711,13 @@ RR.Renderer = (function () {
       // 名前札（走者の後ろ＝左）。揺らさない。全走者を描いた後に最前面へ描く
       plateQ.push(function () {
         var pyy = yc - ph / 2;
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.35)';
-        ctx.shadowBlur = 6;
-        ctx.shadowOffsetY = 2;
+        // 影は shadowBlur を使わず、ずらした半透明の板で（描画を軽くする）
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        rrect(ctx, px + 2, pyy + 3, py.w, ph, ph * 0.28);
+        ctx.fill();
         ctx.fillStyle = color;
         rrect(ctx, px, pyy, py.w, ph, ph * 0.28);
         ctx.fill();
-        ctx.restore();
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#fff';
         rrect(ctx, px, pyy, py.w, ph, ph * 0.28);
@@ -704,6 +726,8 @@ RR.Renderer = (function () {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         outlined(ctx, py.text, px + py.w / 2, yc + py.fs * 0.05, py.fs, '#fff', 'rgba(0,0,0,0.75)', Math.max(3, py.fs * 0.16));
+        // v4: 着順スタンプ（ゴールの瞬間に名前札の左へ「ドン！」。1・2着は写真判定の発表のとき）
+        if (finished && !hidden && sinceStamp >= 0) drawStamp(px - lh * 0.5, yc, rank + 1, sinceStamp, lh);
       });
 
       // 乗り物＋乗り手（グループで同じ姿勢）
@@ -751,7 +775,7 @@ RR.Renderer = (function () {
       outlined(ctx, String(i + 1), zx + zw / 2, zy + zh / 2 + zh * 0.04, zh * 0.8, '#fff', 'rgba(0,0,0,0.6)', Math.max(2, zh * 0.14));
 
       // 顔（丸窓）
-      var kind = faceKind(i, t, ev, rk, tension);
+      var kind = faceKind(i, t, ev, rk, tension, hidden);
       var emo = look.faces[kind] || look.face;
       var mem = faceMem[i];
       if (!mem || t < mem.since) mem = faceMem[i] = { e: emo, since: -99999 };
@@ -770,11 +794,7 @@ RR.Renderer = (function () {
       ctx.strokeStyle = look.tint;
       ctx.lineWidth = fr * 0.34;
       ctx.beginPath(); ctx.arc(0, 0, fr * 1.03, 0, 6.283); ctx.fill(); ctx.stroke();
-      ctx.font = Math.round(fr * 1.7) + 'px ' + EMOJI_FONT;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#000';
-      ctx.fillText(emo, 0, fr * 0.06);
+      drawEmoji(emo, 0, fr * 0.06, fr * 1.7);
       ctx.restore();
 
       // スカーフ（走者色。顔の下にたなびく）
@@ -842,24 +862,20 @@ RR.Renderer = (function () {
         outlined(ctx, '↩', cx + size * 0.6, yc - lh * 0.3, big, '#00e5ff', '#003a5c', big * 0.2);
       }
       if (ev.swap) {
-        ctx.font = Math.round(big) + 'px ' + EMOJI_FONT;
-        ctx.fillStyle = '#000';
         var sw = Math.sin(t * 0.03) * 0.15;
         ctx.save();
         ctx.translate(cx + size * 0.6, yc - lh * 0.3);
         ctx.rotate(sw);
-        ctx.fillText('⚡', 0, 0);
+        drawEmoji('⚡', 0, 0, big);
         ctx.restore();
       }
 
       // ゴール後：1着はキラキラ
-      if (finished && rank === 0) {
-        ctx.font = Math.round(size * 0.5) + 'px ' + EMOJI_FONT;
-        ctx.fillStyle = '#000';
+      if (finished && rank === 0 && !hidden) {
         for (var z = 0; z < 2; z++) {
           pc++;
           var za = t * 0.004 + z * 3.1;
-          ctx.fillText('✨', cx + (z ? 1 : -1) * size * 0.62, yc - size * 0.15 + Math.sin(za) * size * 0.2);
+          drawEmoji('✨', cx + (z ? 1 : -1) * size * 0.62, yc - size * 0.15 + Math.sin(za) * size * 0.2, size * 0.5);
         }
       }
 
@@ -873,8 +889,9 @@ RR.Renderer = (function () {
         else if (rn === 2) { bcol = '#c3cad2'; tcol = '#1e252b'; }
         else if (rn === 3) { bcol = '#c9772b'; tcol = '#2e1600'; }
         else { bcol = '#24304a'; }
-        var bpop = ease(sinceFin / 250);
+        var bpop = ease((hidden ? sinceFin : sinceStamp) / 250);
         var rad = bd / 2 * (0.6 + 0.4 * bpop);
+        if (hidden) { bcol = '#5a6170'; tcol = '#fff'; }   // 発表前は「?」
         ctx.fillStyle = bcol;
         ctx.beginPath(); ctx.arc(bx, yc, rad, 0, 6.283); ctx.fill();
         ctx.lineWidth = 4;
@@ -885,9 +902,34 @@ RR.Renderer = (function () {
         ctx.fillStyle = tcol;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(rn), bx, yc + rf * 0.06);
+        ctx.fillText(hidden ? '?' : String(rn), bx, yc + rf * 0.06);
       }
       ctx.textAlign = 'left';
+    }
+
+    // 着順スタンプ：丸い判子に「N着」。押した瞬間は大きく、0.22秒で縮んで止まる
+    function drawStamp(x, y, rn, since, lh) {
+      var k = clamp(since / 220, 0, 1);
+      var sc = 1 + 1.3 * (1 - ease(k));
+      var r = lh * 0.42;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.22);
+      ctx.scale(sc, sc);
+      ctx.globalAlpha = 0.25 + 0.7 * ease(k);
+      ctx.fillStyle = rn === 1 ? 'rgba(255,215,64,0.95)' : 'rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+      ctx.lineWidth = Math.max(3, r * 0.14);
+      ctx.strokeStyle = '#d0021b';
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.8, 0, 6.283); ctx.lineWidth = Math.max(1.5, r * 0.05); ctx.stroke();
+      var fs = r * (rn >= 10 ? 0.62 : 0.78);
+      ctx.font = '900 ' + Math.round(fs) + 'px ' + TEXT_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#d0021b';
+      ctx.fillText(rn + '着', 0, fs * 0.06);
+      ctx.restore();
     }
 
     // ---------- 緊迫感の演出 ----------
@@ -1055,13 +1097,10 @@ RR.Renderer = (function () {
           ctx.stroke();
         }
         // 舞う葉っぱ
-        ctx.font = '40px ' + EMOJI_FONT;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#000';
         for (k = 0; k < 3; k++) {
           x = ((hash(k, 11) + t * 0.0003) % 1) * (W + 200) - 100;
           y = hash(k, 12) * H + Math.sin(t * 0.002 + k) * 30;
-          ctx.save(); ctx.translate(x, y); ctx.rotate(t * 0.003 + k); ctx.fillText('🍃', 0, 0); ctx.restore();
+          ctx.save(); ctx.translate(x, y); ctx.rotate(t * 0.003 + k); drawEmoji('🍃', 0, 0, 40); ctx.restore();
         }
         ctx.textAlign = 'left';
       } else if (wid === 'cloudy') {
@@ -1085,6 +1124,10 @@ RR.Renderer = (function () {
       var tx = 0, ty = 0;
       if (zoom > 0 && plan.photo) {
         var ra = laneRect(plan.photo.a), rb = laneRect(plan.photo.b);
+        // v4: 1着・2着のレーンが離れていても2人とも画面に入るよう、寄りを弱める
+        var span = Math.abs(ra.y - rb.y) + ra.h + L.laneH * 0.6;
+        var sMax = clamp(H * 0.92 / span, 1, 2.2);
+        s = 1 + (sMax - 1) * zoom;
         var fx = L.x1 - L.emoji * 0.6;
         var fy = (ra.y + ra.h / 2 + rb.y + rb.h / 2) / 2;
         var cx = lerp(fx, W * 0.6, zoom);
@@ -1108,7 +1151,7 @@ RR.Renderer = (function () {
       var i;
       var ranks = ranksAt(t);
       plateQueue = [];
-      for (i = 0; i < L.n; i++) drawRunner(i, t, ranks[i], tension);
+      for (i = 0; i < L.n; i++) drawRunner(i, t, ranks[i], tension, view.reveal);
       for (i = 0; i < plateQueue.length; i++) plateQueue[i]();
       plateQueue = [];
       ctx.restore();
@@ -1141,6 +1184,32 @@ RR.Renderer = (function () {
       }
     }
 
+    // 写真判定のフィルム用：演出なしの1枚を裏で描き、1着・2着のレーンのゴール付近だけを切り出して上下に並べる
+    //（レーンが離れていても2人とも写る。どちらが1着かは分からないよう、レーン番号の順に並べる）
+    function photo(t) {
+      if (!plan || !L || typeof document === 'undefined') return snapshot();
+      var off = document.createElement('canvas');
+      off.width = canvas.width; off.height = canvas.height;
+      var keep = ctx;
+      ctx = off.getContext('2d');
+      try { draw(t, { zoom: 0, slow: false, frozen: false, flash: 0, tension: 0, reveal: -1 }); } finally { ctx = keep; }
+      var lanes = [plan.photo.a, plan.photo.b].sort(function (x, y) { return x - y; });
+      var lh = L.laneH, gap = Math.max(4, lh * 0.06);
+      var cw = Math.min(W, L.maxPlate + L.emoji * 2.2 + L.cs * 2 + 16);
+      var sx = Math.max(0, L.x1 + L.cs * 2 + 8 - cw);
+      var out = document.createElement('canvas');
+      out.width = Math.round(cw * dpr); out.height = Math.round((lh * 2 + gap) * dpr);
+      var o = out.getContext('2d');
+      o.fillStyle = '#000'; o.fillRect(0, 0, out.width, out.height);
+      lanes.forEach(function (i, k) {
+        o.drawImage(off, sx * dpr, (L.top + i * lh) * dpr, cw * dpr, lh * dpr, 0, k * (lh + gap) * dpr, cw * dpr, lh * dpr);
+      });
+      var gx = (L.x1 - sx) * dpr;
+      o.strokeStyle = 'rgba(255,30,30,0.95)'; o.lineWidth = Math.max(2, 3 * dpr);
+      o.beginPath(); o.moveTo(gx, 0); o.lineTo(gx, out.height); o.stroke();
+      return out;
+    }
+
     function snapshot() {
       var c = document.createElement('canvas');
       c.width = canvas.width;
@@ -1150,7 +1219,7 @@ RR.Renderer = (function () {
       return c;
     }
 
-    api = { setPlan: setPlan, resize: resize, draw: draw, snapshot: snapshot, laneRect: laneRect, looks: looks, particles: 0 };
+    api = { setPlan: setPlan, resize: resize, draw: draw, snapshot: snapshot, photo: photo, laneRect: laneRect, looks: looks, particles: 0 };
     return api;
   }
 

@@ -6,7 +6,7 @@
  *   setMuted(bool)         ミュート（全ての音と読み上げを止める）
  *   isMuted()
  *   play(name)             'tick','go','boost','stumble','reverse','swap','freeze','unfreeze',
- *                          'lamp','lampFinal','shutter','fanfare','cheer'
+ *                          'lamp','lampFinal','shutter','fanfare','cheer','stamp','cutin'
  *   startLoop()            足音リズム＋控えめベース
  *   stopLoop()
  *   setSlow(bool)          ループのテンポ/ピッチを落とし、心音を重ねる
@@ -262,6 +262,18 @@ RR.Audio = (function () {
       tone(440, t + 0.2, 0.2, { type: 'triangle', vol: 0.25, to: 880, a: 0.005, r: 0.08 });
       tone(660, t + 0.35, 0.25, { type: 'triangle', vol: 0.22, a: 0.005, r: 0.1 });
     },
+    // 着順スタンプ「ドン！」
+    stamp: function (t) {
+      thump(t, 150, 45, 0.28, 0.55);
+      noise(t, 0.08, { type: 'lowpass', freq: 900, q: 0.7, vol: 0.3, a: 0.002 });
+    },
+    // 勝者カットイン「シュバッ → ジャーン」
+    cutin: function (t) {
+      noise(t, 0.35, { type: 'bandpass', freq: 800, freqTo: 5000, q: 0.8, vol: 0.22, a: 0.02 });
+      var ch = ['C5', 'E5', 'G5', 'C4'];
+      for (var i = 0; i < ch.length; i++) brass(NOTE[ch[i]] || 523.25, t + 0.3, 0.9, 0.13);
+      thump(t + 0.3, 120, 50, 0.35, 0.5);
+    },
     lamp: lamp,
     lampFinal: lampFinal,
     shutter: shutter,
@@ -469,6 +481,17 @@ RR.Audio = (function () {
     } catch (e) { /* ignore */ }
   }
 
+  // v4: 実況役と解説役で声を分ける。解説役は男性の声（Ichiro など）を優先し、実況役は女性の声にする
+  var MALE_RE = /ichiro|keita|daichi|naoki|男性|male/i;
+  function pickVoices() {
+    var kai = null, ana = null, i;
+    for (i = 0; i < voices.length; i++) if (MALE_RE.test(voices[i].name)) { kai = voices[i]; break; }
+    for (i = 0; i < voices.length; i++) if (voices[i] !== kai && !MALE_RE.test(voices[i].name)) { ana = voices[i]; break; }
+    if (!ana) ana = voices[0];
+    if (!kai) kai = voices.length > 1 ? (voices[1] === ana ? voices[0] : voices[1]) : voices[0];
+    return { ana: ana, kai: kai, kaiMale: !!(kai && MALE_RE.test(kai.name)) };
+  }
+
   function cb(f, a) { if (typeof f === 'function') { try { f(a); } catch (e) { /* ignore */ } } }
 
   // speak(text, role, opts)  opts = {priority:'high'|'normal', onstart(real), onend(), ondrop(), fallbackMs, maxWaitMs}
@@ -494,11 +517,13 @@ RR.Audio = (function () {
     if (speaking && curFinish) curFinish('preempt');
 
     var isAna = role === 'ana';
-    var voice = (isAna || voices.length < 2) ? voices[0] : voices[1];
+    var vp = pickVoices();
+    var voice = isAna ? vp.ana : vp.kai;
     var u = new window.SpeechSynthesisUtterance(String(text));
     u.voice = voice;
     u.lang = 'ja-JP';
-    u.pitch = isAna ? 1.3 : 0.8;
+    // 解説役が男性の声なら高さはそのまま、同じ声しかないときは高さで区別する
+    u.pitch = isAna ? 1.3 : (vp.kaiMale ? 1.0 : 0.8);
     u.rate = isAna ? 1.45 : 1.25;
     u.volume = 1;
 

@@ -54,9 +54,9 @@ function validate(plan, nm) {
   if (d01 < 40 || d01 > 120) e('R3', '1st-2nd gap ' + d01);
   for (k = 2; k < n; k++) {
     var dg = ft[order[k]] - ft[order[k - 1]];
-    if (dg < 200 || dg > 900) e('R3', 'gap ' + dg);
+    if (dg < 200 || dg > 1100) e('R3', 'gap ' + dg);
   }
-  if (plan.raceEnd < 26000 || plan.raceEnd > 29000 || plan.raceEnd !== ft[order[n - 1]]) e('R3', 'raceEnd ' + plan.raceEnd);
+  if (plan.raceEnd < 40000 || plan.raceEnd > 44000 || plan.raceEnd !== ft[order[n - 1]]) e('R3', 'raceEnd ' + plan.raceEnd);
   if (p.a !== order[0] || p.b !== order[1] || p.t0 !== ft[p.a] || p.t1 !== ft[p.b]) e('R3', 'photo mismatch');
   if (plan.slowFrom < p.t0 - 1600 || plan.slowFrom > p.t0 - 1200) e('R3', 'slowFrom ' + plan.slowFrom);
   if (!/^[0-9A-Z]{2}-[0-9A-Z]{3}-[0-9A-Z]{2}$/.test(plan.sealCode) || plan.sealCode !== Core.sealCode(plan.order, nm)) e('R3', 'sealCode ' + plan.sealCode);
@@ -187,7 +187,7 @@ var RUNS_PER_N = 200;
 var lead = {};
 [2, 6, 8, 10, 12].forEach(function (n) {
   var nm = names(n), errs = [], evCnt = {}, frz = 0, notLeadA = 0, notLeadB = 0, types = {};
-  var tag = {}, lc2 = 0, lcSum = 0, dg = [], i;
+  var tag = {}, lc2 = 0, lcSum = 0, dg = [], packTop = [], i;
   for (var r = 0; r < RUNS_PER_N; r++) {
     var plan = Core.planRace(nm, { seed: nextSeed() });
     var es = validate(plan, nm);
@@ -201,12 +201,15 @@ var lead = {};
     var lo = 0.6 * plan.photo.t0, cnt = plan.leadChanges.filter(function (c) { return c.t >= lo; }).length;
     if (cnt >= 2) lc2++;
     lcSum += cnt;
-    // pack tightness at finalFrom: spread of everyone except the current leader and the last runner
+    // v4: 中盤はばらける（全員の幅・隣どうしの平均間隔）。終盤の入り口では優勝争いの上位 kC 人が固まる
     if (n >= 4) {
-      var pr = [];
-      for (i = 0; i < n; i++) pr.push(plan.progress(i, plan.finalFrom));
-      pr.sort(function (x, y) { return x - y; });
-      dg.push(pr[n - 2] - pr[1]);
+      var tm = 0.5 * plan.photo.t0, pr = [];
+      for (i = 0; i < n; i++) pr.push(plan.progress(i, tm));
+      pr.sort(function (x, y) { return y - x; });
+      dg.push({ width: pr[0] - pr[n - 1], adj: (pr[0] - pr[n - 1]) / (n - 1) });
+      var kC = n <= 3 ? n : (n <= 6 ? 3 : 4), top = [];
+      for (i = 0; i < kC; i++) top.push(plan.progress(plan.order[i], plan.finalFrom + 1000));
+      packTop.push(Math.max.apply(null, top) - Math.min.apply(null, top));
     }
   }
   lead[n] = { a: notLeadA / RUNS_PER_N, b: notLeadB / RUNS_PER_N };
@@ -218,11 +221,13 @@ var lead = {};
   report(lcRate >= 0.8, 'n=' + n + ' lead changes >=2 in last 40%',
     (lcRate * 100).toFixed(1) + '% of races (avg ' + (lcSum / RUNS_PER_N).toFixed(2) + ' changes), need >=80%');
   if (n >= 4) {
-    dg.sort(function (x, y) { return x - y; });
-    var mean = dg.reduce(function (x, y) { return x + y; }, 0) / dg.length, p90 = dg[Math.floor(dg.length * 0.9)], mx = dg[dg.length - 1];
-    var limMean = n <= 8 ? 0.06 : 0.11, limMax = n <= 8 ? 0.10 : 0.17;
-    report(mean <= limMean && mx <= limMax, 'n=' + n + ' pack tightness at finalFrom (middle runners, excl. leader & last)',
-      'range mean=' + mean.toFixed(3) + ' p90=' + p90.toFixed(3) + ' max=' + mx.toFixed(3) + ' (limits mean<=' + limMean + ' max<=' + limMax + ')');
+    var mw = 0, ma = 0, mp = 0;
+    dg.forEach(function (d) { mw += d.width / dg.length; ma += d.adj / dg.length; });
+    packTop.forEach(function (d) { mp += d / packTop.length; });
+    // コース約1350pxで換算：幅0.2=270px、隣どうし0.025=34px、優勝争い0.05=68px
+    report(mw >= 0.2 && ma >= 0.025, 'n=' + n + ' v4 field spreads out mid-race (not bunched)',
+      'width mean=' + mw.toFixed(3) + ' (>=0.2) adjacent mean=' + ma.toFixed(3) + ' (>=0.025)');
+    report(mp <= 0.05, 'n=' + n + ' v4 title contenders bunch up in the final', 'top-k range at finalFrom+1s mean=' + mp.toFixed(3) + ' (<=0.05)');
   }
 });
 

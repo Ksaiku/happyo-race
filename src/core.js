@@ -110,6 +110,9 @@ RR.Core = (function () {
     photo:  ['{n}か！{m}か！', '{n}と{m}、並んだ！']
   };
 
+  // 走りのばらけ具合（v4）。mid=中盤のずれの大きさ、backDrift/back/backGap=優勝争い以外の後方の間隔、minSlow=終盤入りで落とせる速さの下限
+  var SPREAD = { mid: 0.2, backDrift: 0.015, back: 1.3, backGap: 0.02, minSlow: 0.12, packJitter: 0.012 };
+
   // ---------------------------------------------------------------- helpers
   function w(x) { return x >= 1 ? 0 : (x <= 0 ? 1 : 0.5 * (1 + Math.cos(Math.PI * x))); }
   function ease(x) { return x <= 0 ? 0 : (x >= 1 ? 1 : 0.5 * (1 - Math.cos(Math.PI * x))); }
@@ -154,9 +157,11 @@ RR.Core = (function () {
     for (q = 0; q < n; q++) rankOf[order[q]] = q;
 
     // ---- finish times
-    var R = 26000 + Math.floor(rng() * 3001); // v3: 26〜29秒（掛け合い実況の尺）
+    var R = 40000 + Math.floor(rng() * 4001); // v4: 40〜44秒（実況を最後まで言える尺）
+    // 優勝争い（終盤の団子に入る上位 kC 人）。それより下はばらけたままゴールする
+    var kC = n <= 3 ? n : (n <= 6 ? 3 : 4);
     var gaps = [40 + Math.floor(rng() * 81)];
-    for (q = 1; q < n - 1; q++) gaps.push(220 + Math.floor(rng() * 481));
+    for (q = 1; q < n - 1; q++) gaps.push(q < kC - 1 ? 220 + Math.floor(rng() * 381) : 500 + Math.floor(rng() * 601));
     var total = 0;
     for (q = 0; q < gaps.length; q++) total += gaps[q];
     var t0 = R - total;
@@ -174,30 +179,27 @@ RR.Core = (function () {
     // ---- base curves (monotone, 0 -> 1 exactly at finishTime)
     var K = 600;
     var tables = new Array(n);
+    // v4: 位置のずれ D(u) を「0 から始まり、終盤の入り口(tA)で目標値に戻る」波で作る。
+    //   中盤は大きくばらけ（逃げ・差し・追い込み）、tA で優勝争いの kC 人は同じ位置に、それより下は着順どおり後ろに並ぶ。
+    //   速度 = 1 + D'(u)。0.15 未満にしない（単調増加を保つ）。
+    var tA0 = t0 - 9500;
     function buildTable(i) {
       var T = finishTime[i];
-      var ur = 1 - 2600 / T;
-      var amps = [], fr = [], ph = [], ws = 0, j;
-      for (j = 0; j < 3; j++) {
-        var wt = 0.4 + rng();
-        amps.push(wt); ws += wt;
-        fr.push(0.8 + rng() * 2.6);
-        ph.push(rng() * 2 * Math.PI);
-      }
-      var tot = 0.30 + 0.10 * rng();
-      for (j = 0; j < 3; j++) amps[j] = tot * amps[j] / ws;
-      var c;
-      if (i === a) c = -(0.15 + 0.04 * rng());        // winner: hold back early, charge late
-      else if (i === b) c = 0.08 + 0.05 * rng();      // runner-up: lead early
-      else c = (rng() - 0.5) * 0.10;
+      var uA = Math.min(0.95, tA0 / T);
+      var M = SPREAD.mid;
+      var r1 = rng(), r2 = rng(), r3 = rng();
+      var A1;
+      if (i === a) A1 = M * (-1 + 1.4 * r1);          // 1着：やや後ろ寄りだが、先行する回もある
+      else if (i === b) A1 = M * (-0.4 + 1.4 * r1);   // 2着：やや前寄り
+      else A1 = M * (2 * r1 - 1);
+      var A2 = M * 0.27 * (2 * r2 - 1), A3 = M * 0.1 * (2 * r3 - 1);
+      var dl = rankOf[i] >= kC ? -SPREAD.backDrift * (rankOf[i] - kC + 1) : SPREAD.packJitter * (2 * rng() - 1);
       function v(u) {
-        if (u >= ur) return 1;
-        var s = u / ur;
-        var g = s < 0.72 ? Math.sin(Math.PI * s / 0.72) : -2.571 * Math.sin(Math.PI * (s - 0.72) / 0.28);
-        var tp = s < 0.8 ? 1 : 0.5 * (1 + Math.cos(Math.PI * (s - 0.8) / 0.2));
-        var nz = 0;
-        for (var k = 0; k < 3; k++) nz += amps[k] * Math.sin(2 * Math.PI * fr[k] * u + ph[k]);
-        return 1 + c * g + nz * tp;
+        if (u >= uA) return 1;
+        var x = u / uA, w = Math.PI / uA;
+        var d = A1 * w * Math.cos(Math.PI * x) + A2 * 2 * w * Math.cos(2 * Math.PI * x) + A3 * 3 * w * Math.cos(3 * Math.PI * x);
+        d += dl * 6 * x * (1 - x) / uA;
+        return Math.max(0.15, 1 + d);
       }
       var P = new Float64Array(K + 1);
       var prev = v(0);
@@ -237,22 +239,26 @@ RR.Core = (function () {
     for (q = 0; q < n; q++) {
       var Tq = finishTime[q];
       var oa = tabAt(oldTables[q], Tq, tA);
-      var pp = Lc - gF * (Tq - t0) * vf;
-      pp = Math.max(oa + 0.25 * vf * 4500, Math.min(oa + 2.2 * vf * 4500, pp));
+      // 優勝争いの kC 人は団子に、それより下は着順どおりに間隔をあけて後ろに並べる
+      var back = rankOf[q] >= kC;
+      var pp = Lc - (back ? SPREAD.back : gF) * (Tq - t0) * vf - (back ? SPREAD.backGap * (rankOf[q] - kC + 1) : 0);
+      pp = Math.max(oa + SPREAD.minSlow * vf * 4500, Math.min(oa + 2.2 * vf * 4500, pp));
       pp = Math.min(pp, 1 - 0.3 * vf * (Tq - finalFrom));
       p0.push(pp);
       vi.push((1 - pp) / (Tq - finalFrom));
     }
     var aBehind = n >= 3 && rng() < 0.55;                    // winner sometimes strikes from the back in the last 3s
-    var danceBase = order.slice(0, Math.min(n, 5));
+    var danceBase = order.slice(0, kC);
     var dance = aBehind ? danceBase.slice(1) : danceBase;
     var seq = [], prevC = -1;
     for (j = 0; j < 3; j++) {
-      var cand = dance.filter(function (x) { return x !== prevC; });
+      // v4: 先頭交代を減らす（実況が追いつくように）。最初の2つは同じ人が先頭、3つ目は1着か2着が先頭で一騎打ちへ
+      if (j === 1) { seq.push(prevC); continue; }
+      var cand = (j === 2 ? [a, b] : dance).filter(function (x) { return x !== prevC; });
       prevC = cand[Math.floor(rng() * cand.length)];
       seq.push(prevC);
     }
-    var amp = vf * 180;
+    var amp = vf * 250;
     var vals = [];
     for (j = 0; j < 4; j++) {
       var row = [];
@@ -265,6 +271,12 @@ RR.Core = (function () {
         var cc = seq[j], M = -1;
         for (q = 0; q < n; q++) if (q !== cc && row[q] > M) M = row[q];
         if (row[cc] < M + vf * 40) row[cc] = M + vf * (40 + 60 * rng());
+      } else {
+        // 最後の約3秒は1着・2着の一騎打ち：ほかの優勝争いは少し後ろに下げる
+        if (row[b] > row[a] + vf * 250) row[b] = row[a] + vf * 250;
+        if (row[b] < row[a] - vf * 250) row[b] = row[a] - vf * 250;
+        var lim = Math.min(row[a], row[b]) - vf * 300;
+        for (q = 0; q < n; q++) if (q !== a && q !== b && row[q] > lim) row[q] = lim;
       }
       vals.push(row);
     }
@@ -361,13 +373,13 @@ RR.Core = (function () {
       var hiT = slowFrom - 3000;
       for (var att = 0; att < 400; att++) {
         var te = 3600 + Math.floor(rng() * (hiT - 3600 + 1));
-        var sp = att < 150 ? 1400 : 0;
+        var sp = att < 150 ? 4500 : (att < 300 ? 2500 : 0); // v4: 実況の掛け合い1組（約4.5秒）が入るよう間隔をあける
         var ranked = pool.slice().sort(function (x, y) { return bprog(y, te) - bprog(x, te); });
         var r = -1, r2 = -1, par = 0, dur = 0, text;
         if (type === 'stumble') {
           r = pool[Math.floor(rng() * pool.length)];
           dur = 800 + Math.floor(rng() * 401);
-          text = pick(TEXTS.stumble, rng).replace('{n}', nm(r));
+          text = pick(TEXTS.stumble, rng).replace('{n}', function () { return nm(r); });
         } else if (type === 'boost') {
           // uniform over everyone; trailing runners are merely favoured (leaders accepted half the time)
           for (var bt = 0; bt < 4; bt++) {
@@ -375,11 +387,11 @@ RR.Core = (function () {
             if (ranked.indexOf(r) >= ranked.length / 2 || rng() < 0.5) break;
           }
           par = 0.06 + rng() * 0.03; dur = 1200;
-          text = pick(TEXTS.boost, rng).replace('{n}', nm(r));
+          text = pick(TEXTS.boost, rng).replace('{n}', function () { return nm(r); });
         } else if (type === 'reverse') {
           r = pool[Math.floor(rng() * pool.length)];
           par = 0.05 + rng() * 0.03; dur = 700;
-          text = pick(TEXTS.reverse, rng).replace('{n}', nm(r));
+          text = pick(TEXTS.reverse, rng).replace('{n}', function () { return nm(r); });
         } else {
           if (pool.length < 2) return false;
           var bestD = -1;
@@ -392,7 +404,7 @@ RR.Core = (function () {
           }
           if (r < 0 || (bestD < 0.03 && att < 250)) continue;
           dur = 500;
-          text = pick(TEXTS.swap, rng).replace('{n}', nm(r)).replace('{m}', nm(r2));
+          text = pick(TEXTS.swap, rng).replace(/{[nm]}/g, function (k) { return k === '{n}' ? nm(r) : nm(r2); });
         }
         var limit = Math.min(slowFrom, finishTime[r] - 2500);
         if (att < 250 && limit > finalFrom) limit = finalFrom; // prefer events that finish before the pack forms
@@ -434,7 +446,7 @@ RR.Core = (function () {
       if (t <= t0 - 2000 || t >= t0 - 200) return 0;
       var s = Math.sin(Math.PI * (t - (t0 - 2000)) / 1800);
       s *= s;
-      return i === a ? -0.004 * s : 0.012 * s;
+      return i === a ? -vf * 120 * s : vf * 350 * s;
     }
 
     function progress(i, t) {
@@ -489,10 +501,10 @@ RR.Core = (function () {
     }
 
     // ---- commentary: only the pre-race intro (negative times); in-race lines are generated by the app
-    var vname = vehicle.emoji + vehicle.label;
+    // v4: 読み上げが紹介ボードの表示中に終わるよう短くする（詳しい予報はボードに文字で出す）
     var commentary = [
-      { t: -4500, role: 'ana', text: '本日の天気は' + weather.emoji + weather.label + '！' + weather.forecast + '！' },
-      { t: -2300, role: 'kai', text: '本日の乗り物は' + vname + '。' + n + vehicle.counter + 'が一斉にスタートします。' + weather.note }
+      { t: -4500, role: 'ana', text: '本日の天気は、' + weather.label + '！' },
+      { t: -2300, role: 'kai', text: '乗り物は' + vehicle.label + '。' + n + vehicle.counter + 'で勝負です' }
     ];
 
     return {
@@ -526,7 +538,8 @@ RR.Core = (function () {
     WEATHERS: WEATHERS,
     planRace: planRace,
     PHRASES: PHRASES,
-    sealCode: sealCode
+    sealCode: sealCode,
+    SPREAD: SPREAD
   };
 })();
 

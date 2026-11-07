@@ -34,7 +34,7 @@ export TEMP="$PWD/scratch/tmp" TMP="$PWD/scratch/tmp"; mkdir -p scratch/tmp
 node build.js            # dist/index.html を作り直す（src を変えたら毎回）
 node test/core.test.js   # ロジック検査
 node test/e2e.js         # 画面込みの検査（1〜2分。Microsoft Edge を使う）
-node test/subs-check.js voice   # 実況と画面のズレ確認
+node test/subs-check.js voice 3 # 実況と画面のズレ確認（3レース。最後まで言えた割合・言い終わりの一致率を出す）
 ```
 - 動作確認用 URL パラメータ：`dist/index.html?speed=3`（3倍速）。テストは `window.__raceLog`（subs / errors / done）を見ている。
 - C: ドライブのファイルは消さない（ユーザーの PC。空き不足は TEMP の付け替えで回避する）。
@@ -42,7 +42,8 @@ node test/subs-check.js voice   # 実況と画面のズレ確認
 ## 実況の仕組み（壊しやすいので注意）
 - 字幕は **読み上げが始まった瞬間** に出す。始まる前に状況が変わったら `valid()` で捨てる。
 - high 優先は割り込み、normal は喋り中なら捨てる。1200ms 以内に始まらない文は捨てる。
-- 台詞は `'本文｜ツッコミ'` 形式。`#`=走者名、`@`=2人目、`%`=帽子、`$`=乗り物。ana＝煽り（ボケ）、kai＝ツッコミ。本文の上限は high 16字 / normal 20字。
+- v4：`valid(t1, t2)` は「字幕が出る時刻」と「言い終わる時刻（`estRace` で見積もり）」の両方で確かめる。普通の文は、次のイベント・ラストスパート・写真判定までに言い終わるときだけ言う（`fitsBeforeHigh`）。先頭交代は割り込まない。
+- 台詞は `'本文｜ツッコミ'` 形式。`#`=走者名、`@`=2人目、`%`=帽子、`$`=乗り物、`&`=着順（例「3着」）。ana＝煽り（ボケ）、kai＝ツッコミ。本文の上限は high 16字 / normal 20字。
 - 変更したら `node test/subs-check.js voice` で、字幕とレース状況が合っているかを必ず見る。
 
 ## 公開リポジトリとしてのルール

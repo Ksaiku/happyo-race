@@ -150,7 +150,7 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
   }
   function hideSub() { $('sub').classList.add('hidden'); }
   function hideOverlays() {
-    ['telop', 'sub', 'freezeMsg', 'count', 'intro', 'film', 'skipHint', 'spurt'].forEach(function (id) { $(id).classList.add('hidden'); });
+    ['telop', 'sub', 'freezeMsg', 'count', 'intro', 'film', 'skipHint', 'spurt', 'cutin'].forEach(function (id) { $(id).classList.add('hidden'); });
   }
 
   // =====================================================================
@@ -163,50 +163,79 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
   // 台詞の書式: '本文' または '本文｜ツッコミ'（ツッコミは本文の後に相方が言う）。
   //   # = 走者名, @ = 2人目の名前, % = その走者の帽子, $ = 今回の乗り物
   //   ana = 実況（煽り役・ボケ）、kai = 解説（ツッコミ・ぼやき）。
+  //   & = その走者の着順（例「3着」）
+  //   v4: 各種類の台詞を増やし、職場で引っかかりそうな言い回し（発表・評価・反則を連想するもの）を差し替えた。
   var PH = {
-    stumble: { ana: ['#さん転倒！｜受け身は百点です', 'あっ、#さんが！｜見なかったことにしましょう', '#さんつまずいた！｜何もない所でしたね', '#さん、止まった！｜景色を見てますね'],
-               kai: ['#さん、痛い…', '#さん、今のは減点です'] },
-    boost:   { ana: ['#さん急加速！｜朝ごはん何食べたんですか', '#さん、きた！｜急に本気出しましたね', '#さん猛ダッシュ！｜締め切り前の顔です', '#さん、飛んだ！'],
-               kai: ['#さん、大人げない！', '#さん、速い！'] },
-    reverse: { ana: ['#さん逆走！？｜忘れ物ですかね', '#さん、どこへ！？｜帰ろうとしてます', '#さん、逆です！｜ゴールはあっちです！'],
-               kai: ['#さん、向きが…'] },
-    swap:    { ana: ['入れ替わった！？｜今の、反則では？', '#さんと@さんが！？', '何が起きた！？｜私も見てませんでした'],
-               kai: ['位置が入れ替わった？'] },
-    lead:    { ana: ['先頭交代！#さん！', '#さんがトップ！', '#さん抜いた！｜容赦ないですね', '#さん前へ！'],
+    stumble: { ana: ['#さん転倒！｜受け身は百点です', 'あっ、#さんが！｜見なかったことにしましょう', '#さんつまずいた！｜何もない所でしたね',
+                     '#さん、止まった！｜景色を見てますね', '#さん、ずっこけた！｜お約束を守る人です', '#さん、まさかの！｜今のは練習です、たぶん',
+                     '#さん、転んだ！｜立ち上がりが早い！'],
+               kai: ['#さん、今のはノーカンで', '#さん、大丈夫ですか！', '#さん、靴ひもですね'] },
+    boost:   { ana: ['#さん急加速！｜朝ごはん何食べたんですか', '#さん、きた！｜急に本気出しましたね', '#さん猛ダッシュ！｜お昼ごはんが待ってます',
+                     '#さん、飛んだ！｜今、浮いてました？', '#さん、ギア全開！｜隠してましたね', '#さんが光った！｜ターボ付きでしたか'],
+               kai: ['#さん、大人げない！', '#さん、速い速い！', '#さん、本気モードです'] },
+    reverse: { ana: ['#さん逆走！？｜忘れ物ですかね', '#さん、どこへ！？｜帰ろうとしてます', '#さん、逆です！｜ゴールはあっちです！',
+                     '#さん、Uターン！｜寄り道は後で！', '#さん戻った！？｜ガスの元栓ですかね'],
+               kai: ['#さん、向きが逆です', '#さん、地図が逆さまです'] },
+    swap:    { ana: ['入れ替わった！？｜手品でしょうか', '#さんと@さん！？｜場所交換です', '何が起きた！？｜私も見てませんでした',
+                     '瞬間移動！？｜これは新技術です'],
+               kai: ['位置が入れ替わった？', '今、ワープしました？'] },
+    lead:    { ana: ['先頭交代！#さん！', '#さんがトップ！', '#さん抜いた！｜容赦ないですね', '#さん前へ！｜ここで仕掛けた！',
+                     '#さん先頭に！｜いい顔してます'],
                kai: ['#さん、ドヤ顔です', 'トップは#さんに'] },
-    spurt:   { ana: ['ラストスパート！｜ここで本気出す人います', 'ここから勝負！', '最後の直線！｜全員、目が本気です'],
+    spurt:   { ana: ['ラストスパート！｜ここで本気出す人います', 'ここから勝負！｜全員、目が本気です', '最後の直線！｜もう誰にも分かりません',
+                     '勝負どころ！｜手に汗にぎります'],
                kai: ['ここからが勝負です'] },
-    photo:   { ana: ['#さんか！@さんか！', '#さん！@さん！', '#さんか@さんか！'], kai: ['#さんと@さん僅差！'] },
-    leader:  { ana: ['#さん先頭！｜まだ油断できません', '#さんリード！｜もう勝った顔してます', '#さんが引っ張る！', '先頭は#さん！｜後ろ、全然見てません'],
-               kai: ['#さん、余裕の表情', '#さん、鼻歌まじりです'] },
-    close:   { ana: ['#さんと@さん並んだ！｜お互い譲る気ゼロです', '#さん@さん、接戦！', '#さんに@さん！｜近い近い！'],
+    photo:   { ana: ['#さん！@さん！どっちだ！', '並んだ！#さんと@さん！', '#さんと@さん、横一線！'], kai: ['#さんと@さん、僅差！'] },
+    leader:  { ana: ['#さん先頭！｜まだ油断できません', '#さんリード！｜もう勝った顔してます', '#さんが引っ張る！｜風よけ役ですね',
+                     '先頭は#さん！｜後ろ、全然見てません', '#さん、逃げる！｜追いつけるか！', '#さん独走！？｜まだ半分ありますよ'],
+               kai: ['#さん、余裕の表情', '#さん、鼻歌まじりです', '#さん、快調です'] },
+    close:   { ana: ['#さんと@さん並んだ！｜お互い譲る気ゼロです', '#さん@さん、接戦！｜目が離せません', '#さんに@さん！｜近い近い！',
+                     '#さんと@さん！｜火花が散ってます'],
                kai: ['#さんと@さん、バチバチです', '#さんと@さん、目が合った'] },
-    chase:   { ana: ['#さん追い上げ！｜急にやる気が出ました', '#さん、ぐんぐん！', '#さん上がってきた！｜寝たふりでしたね'],
+    melee:   { ana: ['抜きつ抜かれつ！｜目が離せません', '先頭が分からない！｜全員いい顔です', '団子のまま最終盤！｜誰が抜け出す！',
+                     '横一線！｜これは写真判定か！', '大混戦です！｜手に汗にぎります'],
+               kai: ['先頭集団、大混戦です', '誰が勝ってもおかしくない'] },
+    chase:   { ana: ['#さん追い上げ！｜急にやる気が出ました', '#さん、ぐんぐん！｜エンジンかかりました', '#さん上がってきた！｜寝たふりでしたね',
+                     '#さん、来てる来てる！｜ここからの人です', '#さん、まくる！｜作戦どおりですね'],
                kai: ['#さん、いい脚です', '#さん、本気モードです'] },
-    drop:    { ana: ['#さん、下がった！｜お腹すいたんですかね', '#さん失速！｜電池切れでしょうか', '#さん、どうした！｜考えごとですかね'],
-               kai: ['#さん、息切れです'] },
-    last:    { ana: ['#さん最後尾！｜作戦です、たぶん', '#さん、まだまだ！｜景色を楽しんでますね', '#さん、ゆっくり！｜お散歩ペースです', '#さん、のんびり！｜発表の準備中ですかね'],
+    drop:    { ana: ['#さん、下がった！｜お腹すいたんですかね', '#さん失速！｜電池切れでしょうか', '#さん、どうした！｜考えごとですかね',
+                     '#さん、ペースダウン！｜休憩タイムです'],
+               kai: ['#さん、息切れです', '#さん、充電中です'] },
+    last:    { ana: ['#さん最後尾！｜作戦です、たぶん', '#さん、まだまだ！｜景色を楽しんでますね', '#さん、ゆっくり！｜お散歩ペースです',
+                     '#さん、のんびり！｜景色を独り占めです', '#さん、しんがり！｜大物は最後に来ます', '#さん、後ろから！｜全員が見えて安心です'],
                kai: ['#さん、大物の風格', '#さん、マイペースです'] },
-    look:    { ana: ['%の#さん！｜今日いちばんオシャレです', '%の#さん、目立つ！｜走りより帽子が目立ちます', '#さんの%、揺れてる！｜飛ばされないで！'],
+    look:    { ana: ['%の#さん！｜今日いちばんオシャレです', '%の#さん、目立つ！｜走りより帽子が目立ちます', '#さんの%、揺れてる！｜飛ばされないで！',
+                     '#さん、%が光る！｜勝負服ですね'],
                kai: ['%、似合いますね#さん'] },
-    veh:     { ana: ['みなさん$に必死！｜大人が本気です', '$レース白熱！｜会議より白熱してます', '$、乗りこなしてます！｜練習してきましたね'],
+    veh:     { ana: ['みなさん$に必死！｜大人が本気です', '$レース白熱！｜観客席も前のめりです', '$、乗りこなしてます！｜練習してきましたね',
+                     '$、意外と速い！｜見直しました'],
                kai: ['$、意外と速いですね'] },
-    start:   { ana: ['さあスタート！｜みなさん、いい顔です', '#さん好スタート！｜フライングでは？'], kai: ['まずは様子見です'] },
-    goal:    { ana: ['#さんゴール！', '#さん、完走！'], kai: ['#さん、お疲れさま'] },
+    start:   { ana: ['さあスタート！｜みなさん、いい顔です', '#さん好スタート！｜フライングでは？', '各者いっせいに！｜きれいなスタートです'],
+               kai: ['まずは様子見です'] },
+    goal:    { ana: ['#さん、&ゴール！', '#さん&！｜お疲れさまでした', '#さん、&でゴール！'], kai: ['#さん、&です'] },
     freeze:  { ana: ['時が止まった！？｜放送事故ですか？'], kai: ['……止まった？'] },
-    unfreeze:{ ana: ['ウソでした！続行！｜心臓に悪いです', 'ウソです！再開！'], kai: ['再開です'] }
+    unfreeze:{ ana: ['ウソでした！続行！｜心臓に悪いです', 'ウソです！再開！｜寿命が縮みました'], kai: ['再開です'] }
   };
-  // 割り込みで言う種類（短くしたいので本文の上限を小さく）
-  var HIGHK = { stumble: 1, boost: 1, reverse: 1, swap: 1, lead: 1, spurt: 1, photo: 1, freeze: 1, unfreeze: 1 };
+  // 割り込みで言う種類（短くしたいので本文の上限を小さく）。v4: 先頭交代は割り込まない（普通の優先度）
+  var HIGHK = { stumble: 1, boost: 1, reverse: 1, swap: 1, spurt: 1, photo: 1, freeze: 1, unfreeze: 1 };
+  // 1レースで同じ人をいじる回数の上限（最後尾・失速・帽子）
+  var TEASE = { last: 1, drop: 1, look: 1 };
   var HAT_WORD = { '👑': '王冠', '🎩': 'シルクハット', '🧢': 'キャップ', '🎀': 'リボン', '🌸': 'お花', '⛑️': 'ヘルメット',
     '🎓': '角帽', '🪖': 'ヘルメット', '👒': '麦わら帽子', '🍄': 'キノコ帽', '🍓': 'イチゴ帽', '🌻': 'ひまわり', horn: 'ユニコーン角', prop: 'プロペラ帽' };
 
   function newCm() {
     return { subId: 0, cur: 0, shownId: 0, busy: false, replyPending: false, idleSince: -9999, lastRole: 'kai', anaRun: 0,
       lastGenT: -9999, lastHighT: -9999, nextAt: 900, recent: {}, lastKey: '', lastKind: '', lcIdx: 0, stable: -1, cand: -1,
-      candSince: 0, lastLcT: -9999, spurt: false, preShot: false, frozeSaid: false, lookCount: 0, vehSaid: false };
+      candSince: 0, lastLcT: -9999, lastLcTelop: -9999, spurt: false, preShot: false, frozeSaid: false, lookCount: 0, vehSaid: false,
+      teased: {}, curStartReal: 0, curEstReal: 0 };
   }
   function nm(i) { return S.names[i]; }
+  // 読み上げが実際に鳴るか（鳴らないときは字幕だけを 2.2 秒出す）
+  function speechReal() { return !!(speechOn && !muted && aud('speechAvailable')); }
+  // 文を言い終わるまでのおおよその時間。PC内蔵音声の実測（約185ms/字＋開始の遅れ）から
+  function estRealMs(text) { return 300 + String(text).length * 190; }
+  // 同じ時間をレース時計(ms)に直したもの（言い終わる時点のレース状況を確かめるのに使う）
+  function estRace(text) { return speechReal() ? estRealMs(text) * speed : 2200; }
   function hatWord(i) {
     var lk = rend && rend.looks && rend.looks[i];
     return lk && typeof lk.hat === 'string' ? (HAT_WORD[lk.hat] || '') : '';
@@ -216,8 +245,14 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     var hw = needHat ? hatWord(a) : '', vl = S.plan.vehicle && S.plan.vehicle.label;
     if (needHat && !hw) return null;
     if (needVeh && !vl) return null;
-    return tp.replace(/#/g, function () { return nm(a); }).replace(/@/g, function () { return b == null ? '' : nm(b); })
-      .replace(/%/g, function () { return hw; }).replace(/\$/g, function () { return vl || ''; });
+    // 1回でまとめて置き換える（名前に @ % $ & が入っていても化けない）
+    return tp.replace(/[#@%$&]/g, function (c) {
+      if (c === '#') return nm(a);
+      if (c === '@') return b == null ? '' : nm(b);
+      if (c === '%') return hw;
+      if (c === '$') return vl || '';
+      return (S.plan.rankOf ? S.plan.rankOf[a] + 1 : '') + '着';
+    });
   }
 
   function pickText(kind, role, a, b) {
@@ -252,15 +287,40 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
   // ana（ボケ・煽り）を基本にし、3回続いたら kai に回す
   function chooseRole() { return S.cm.anaRun >= 2 ? 'kai' : 'ana'; }
 
-  // 1文を生成して出す。valid() が偽なら（字幕が出る時点で状況が変わっていれば）字幕を出さず捨てる。
+  // 1文を生成して出す。valid(t, tEnd) が偽なら（字幕が出る時点、または言い終わる時点で状況が変わっていれば）出さない。
+  // v4: 言う前にも「言い終わるまで状況が続くか」を確かめ、続かない文は最初から言わない（戻り値 false）。
   function say(kind, a, b, pri, valid) {
     var pk = pickText(kind, chooseRole(), a, b);
-    if (!pk) return;
+    if (!pk) return false;
+    if (valid && !valid(S.t, S.t + estRace(pk.text))) return false;
+    if (pri !== 'high' && !fitsBeforeHigh(pk.text)) return false;
     sayText(kind, pk.text, pk.role, pri, valid, pk.reply);
+    return true;
+  }
+  // v4: 次の割り込み（イベント・ラストスパート・写真判定・フリーズ）は計画で分かっている。
+  //     普通の文は、それまでに言い終わるときだけ言う（言いかけで切られないように）
+  function fitsBeforeHigh(text) {
+    var plan = S.plan, cm = S.cm, t = S.t, end = t + estRace(text), next = Infinity, k;
+    for (k = 0; k < plan.events.length; k++) if (plan.events[k].t > t) { next = Math.min(next, plan.events[k].t); break; }
+    if (!cm.spurt) next = Math.min(next, finalFromOf(plan));
+    if (plan.freeze && !S.freezeDone) next = Math.min(next, plan.freeze.t);
+    next = Math.min(next, plan.slowFrom);
+    return end + 150 * speed <= next;
   }
 
-  function sayText(kind, text, role, pri, valid, reply) {
+  function sayText(kind, text, role, pri, valid, reply, deferred) {
     var cm = S.cm, st = S;
+    // v4: 割り込みでも、今の文があと1.5秒以内に言い終わるなら、言い終わってから言う（文を途中で切らない）
+    if (pri === 'high' && !deferred && cm.busy && cm.curStartReal && speechReal()) {
+      var remain = cm.curEstReal - (performance.now() - cm.curStartReal);
+      if (remain > 0 && remain < 1500) {
+        later(function () {
+          if (S !== st || S.phase !== 'race') return;
+          sayText(kind, text, role, pri, valid, reply, true);
+        }, remain + 80);
+        return;
+      }
+    }
     var id = ++cm.subId, genT = Math.round(S.t);
     cm.cur = id; cm.busy = true; cm.replyPending = false; cm.lastGenT = S.t; cm.lastKind = kind;
     cm.lastRole = role; cm.anaRun = role === 'ana' ? cm.anaRun + 1 : 0;
@@ -270,14 +330,16 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     function onstart(isReal) {
       if (S !== st || started) return;
       started = true; real = !!isReal;
-      if (valid && !valid()) { cm.shownId = 0; aud('cancelSpeech'); idle(); return; }
+      if (valid && !valid(S.t, S.t + estRace(text))) { cm.shownId = 0; aud('cancelSpeech'); idle(); return; }
       cm.shownId = id;
+      cm.curStartReal = performance.now(); cm.curEstReal = estRealMs(text);
       showSub({ role: role, text: text });
       $('sub').classList.remove('hidden');
       log.subs.push({ t: Math.round(S.t), text: text, shownAt: real ? 'start' : 'timer', genT: genT, kind: kind });
     }
     function onend() {
       if (S !== st) return;
+      if (cm.cur === id) cm.curStartReal = 0;
       idle();
       if (cm.shownId !== id) return;
       // ツッコミ：本文が最後まで言えたときだけ、相方がすぐ続ける
@@ -286,7 +348,7 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
         later(function () {
           if (S !== st || cm.cur !== id) return;
           cm.replyPending = false;
-          if (cm.busy || S.phase !== 'race' || S.t >= S.plan.slowFrom) return;
+          if (cm.busy || S.phase !== 'race' || S.t >= S.plan.slowFrom || !fitsBeforeHigh(reply)) return;
           sayText(kind + '+', reply, role === 'ana' ? 'kai' : 'ana', 'normal', valid, null);
         }, 120 / speed);
       }
@@ -318,13 +380,14 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
   }
   function finalFromOf(plan) { return typeof plan.finalFrom === 'number' ? plan.finalFrom : plan.photo.t0 - 5000; }
 
+  // v4: 先頭交代は割り込まない。言い終わるまで先頭が続く場合だけ言う。終盤の団子では個別に言わず「大混戦」系にまとめる。
   function onLeadChange(leader, t, now) {
-    var cm = S.cm;
+    var cm = S.cm, plan = S.plan;
     cm.lastLcT = t;
     var eventTelop = S.telopKind === 'event' && S.telopUntil && now < S.telopUntil;
-    if (!eventTelop) showTelop('先頭交代！', 1100 / speed, false, 'lc');
-    if (t - cm.lastHighT >= 1200) {
-      say('lead', leader, null, 'high', function () { return leaderNow(S.t) === leader; });
+    if (!eventTelop && t - cm.lastLcTelop >= 1500) { cm.lastLcTelop = t; showTelop('先頭交代！', 1100 / speed, false, 'lc'); }
+    if (t < finalFromOf(plan) && !cm.busy && !cm.replyPending && t - cm.lastHighT >= 1200 && t - cm.lastGenT >= 900) {
+      say('lead', leader, null, 'normal', function (t1, t2) { return leaderNow(t1) === leader && leaderNow(t2) === leader; });
     }
   }
 
@@ -370,23 +433,45 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
       }
       if (!cm.vehSaid) cands.push({ k: 'veh', a: lead, w: 1.5 });
     }
-    cands.push({ k: 'leader', a: lead, w: 2 });
+    cands.push({ k: 'leader', a: lead, w: inFinal ? 1 : 2 });
+    // 終盤の団子は、先頭がすぐ入れ替わるので名前なしの「大混戦」系を多めに
+    if (inFinal) cands.push({ k: 'melee', a: lead, w: 4 });
+    // 同じ人を何度もいじらない
+    cands = cands.filter(function (c) { return !TEASE[c.k] || (cm.teased[c.a] || 0) < 2; });
     // 直前と同じ種類・同じ話題を避ける
     var f = cands.filter(function (c) { return c.k !== cm.lastKind && (c.k + c.a) !== cm.lastKey; });
     if (!f.length) f = cands;
-    var tot = 0; f.forEach(function (c) { tot += c.w; });
-    var x = Math.random() * tot, pick = f[0];
-    for (var i = 0; i < f.length; i++) { x -= f[i].w; if (x <= 0) { pick = f[i]; break; } }
-    cm.lastKey = pick.k + pick.a;
-    var valid = null;
-    if (pick.k === 'leader') valid = function () { return leaderNow(S.t) === pick.a; };
-    if (pick.k === 'last') valid = function () { var o = ranksAt(S.t); return o[o.length - 1] === pick.a; };
-    if (pick.k === 'close') valid = function () {
-      return Math.abs(plan.progress(pick.a, S.t) - plan.progress(pick.b, S.t)) < 0.02;
+    // 重みつきで順に試し、「言い終わるまで状況が続く」ものを言う
+    while (f.length) {
+      var tot = 0; f.forEach(function (c) { tot += c.w; });
+      var x = Math.random() * tot, pi = 0;
+      for (var i = 0; i < f.length; i++) { x -= f[i].w; if (x <= 0) { pi = i; break; } }
+      var pick = f.splice(pi, 1)[0];
+      var valid = validFor(pick);
+      if (say(pick.k, pick.a, pick.b, 'normal', valid)) {
+        cm.lastKey = pick.k + pick.a;
+        if (pick.k === 'look') cm.lookCount++;
+        if (pick.k === 'veh') cm.vehSaid = true;
+        if (TEASE[pick.k]) cm.teased[pick.a] = (cm.teased[pick.a] || 0) + 1;
+        return;
+      }
+    }
+  }
+  // 種類ごとの「その文が正しい状況か」。t1 = 字幕が出る時刻、t2 = 言い終わる時刻（レース時計）
+  function validFor(pick) {
+    var plan = S.plan;
+    if (pick.k === 'leader') return function (t1, t2) { return leaderNow(t1) === pick.a && leaderNow(t2) === pick.a; };
+    if (pick.k === 'last') return function (t1, t2) {
+      var o1 = ranksAt(t1), o2 = ranksAt(t2);
+      return o1[o1.length - 1] === pick.a && o2[o2.length - 1] === pick.a;
     };
-    if (pick.k === 'look') cm.lookCount++;
-    if (pick.k === 'veh') cm.vehSaid = true;
-    say(pick.k, pick.a, pick.b, 'normal', valid);
+    if (pick.k === 'close') return function (t1, t2) {
+      return Math.abs(plan.progress(pick.a, t1) - plan.progress(pick.b, t1)) < 0.02 &&
+        Math.abs(plan.progress(pick.a, t2) - plan.progress(pick.b, t2)) < 0.025;
+    };
+    if (pick.k === 'chase') return function (t1, t2) { return ranksAt(t2).indexOf(pick.a) <= ranksAt(t1).indexOf(pick.a); };
+    if (pick.k === 'drop') return function (t1, t2) { return ranksAt(t2).indexOf(pick.a) >= ranksAt(t1).indexOf(pick.a); };
+    return null;
   }
 
   // 毎フレーム（フリーズ中以外）呼ぶ
@@ -443,7 +528,7 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
   function beginRace(names) {
     if (S) clearTimers();
     aud('stopLoop'); aud('setSlow', false); aud('setTension', 0); aud('cancelSpeech');
-    log.goalOrder.length = 0; log.resultOrder.length = 0; log.subs.length = 0; log.done = false;
+    log.goalOrder.length = 0; log.resultOrder.length = 0; log.subs.length = 0; log.done = false; log.verdictShown = false;
     if (!(RR.Core && RR.Core.planRace)) { $('setupMsg').textContent = 'エラー: RR.Core が読み込まれていません'; logErr('RR.Core missing'); return; }
     var plan;
     try { plan = RR.Core.planRace(names); } catch (e) { logErr('planRace: ' + e.message); return; }
@@ -453,7 +538,7 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     S = {
       plan: plan, names: names, phase: 'intro', t: 0, last: 0, slow: false, zoom: 0,
       ei: 0, ci: 0, goaled: [], goalCount: 0, allGoalT: -1, photoShot: false,
-      freezeDone: false, freezeUntil: 0, wasFrozen: false, flashStart: -1,
+      freezeDone: false, freezeUntil: 0, wasFrozen: false, flashStart: -1, snap: null, revealT: -1, verdictAt: 0,
       telopUntil: 0, telopKind: '', timers: [], introTimer: 0, skip: null,
       cm: newCm(), tension: 0, tensionSent: 0
     };
@@ -463,15 +548,22 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     runIntro();
   }
 
-  var INTRO_MS = [1800, 1800, 1700];
+  // v4: 紹介ボードは読み上げが終わるまで待つ（最大 +2.5秒）。文はレース前に切られないよう短くした
+  var INTRO_MS = [2200, 2200, 1900];
+  var INTRO_WAIT_MAX = 2500;
   function runIntro() {
     var p = S.plan, st = S;
     var intro = $('intro');
     // 事前の天気・乗り物紹介（負の時刻の実況）は読み上げのみ（ボードが字幕を隠すため）
     var pre = (p.commentary || []).filter(function (l) { return l && l.t < 0; });
+    var preBusy = false;
     function preSpeak(k) {
       var l = pre[k];
-      if (l && speechOn) aud('speak', l.text, l.role, { priority: 'high', maxWaitMs: 0, fallbackMs: 1 });
+      if (!l || !speechOn) return;
+      preBusy = true;
+      var r = aud('speak', l.text, l.role, { priority: 'high', maxWaitMs: 0, fallbackMs: 1,
+        onend: function () { preBusy = false; }, ondrop: function () { preBusy = false; } });
+      if (r !== 'speech') preBusy = false;
     }
     var steps = [
       function () {
@@ -506,8 +598,14 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
         countdown();
         return;
       }
+      preBusy = false;
       steps[idx]();
-      st.introTimer = setTimeout(next, INTRO_MS[idx] / speed);
+      var waited = 0;
+      st.introTimer = setTimeout(function wait() {
+        if (S !== st || st.phase !== 'intro') return;
+        if (preBusy && waited < INTRO_WAIT_MAX) { waited += 150; st.introTimer = setTimeout(wait, 150); return; }
+        next();
+      }, INTRO_MS[idx] / speed);
     }
     st.skip = next;
     next();
@@ -556,7 +654,9 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
 
   function stepRace(now) {
     var plan = S.plan;
-    var dtReal = Math.min(Math.max(now - S.last, 0), 100);
+    // v4: 描画が遅いPCでもレースが実時間どおり進むよう、1フレームで進める上限を 250ms にした
+    //     （タブを裏にしたときなど、それ以上空いたら止まっていたものとして扱う）
+    var dtReal = Math.min(Math.max(now - S.last, 0), 250);
     S.last = now;
 
     // フリーズ（レース時計停止）
@@ -619,19 +719,21 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     var flash = S.flashStart >= 0 ? Math.max(0, 1 - (now - S.flashStart) / 500) : 0;
     if (flash === 0) S.flashStart = -1;
 
-    if (rend) rend.draw(t, { zoom: S.zoom, slow: S.slow, frozen: frozen, flash: flash, tension: S.tension });
+    // reveal = 写真判定の結果を出したレース時刻（それまで1・2着のバッジ・表情・喜びのポーズは伏せる）
+    if (rend) rend.draw(t, { zoom: S.zoom, slow: S.slow, frozen: frozen, flash: flash, tension: S.tension, reveal: S.revealT });
 
-    // 写真判定
+    // 写真判定：1着がゴールした瞬間の1・2着のレーンを撮っておく（フィルム用）
+    if (!S.snap && t >= plan.photo.t0 && rend) {
+      try { S.snap = rend.photo ? rend.photo(t) : rend.snapshot(); } catch (er) { logErr('photo: ' + er.message); S.snap = null; }
+    }
     if (!S.photoShot && t >= plan.photo.t1) {
       S.photoShot = true;
       // レースは等速に戻すが、音は「心音だけ」の静けさを判定の瞬間まで保つ → 判定ランプ後に解放
       S.slow = false;
-      S.hold = now + (2400 / speed) + 1700;
+      S.hold = now + 4100 / speed;
       aud('setSlow', true);
-      later(function () { aud('setSlow', false); }, (2400 / speed) + 1700);
-      var snap = null;
-      if (rend) { try { snap = rend.snapshot(); } catch (er) { logErr('snapshot: ' + er.message); } }
-      photoFinish(snap);
+      later(function () { aud('setSlow', false); }, 4100 / speed);
+      photoFinish(S.snap);
     }
 
     // ゴール通過検出
@@ -644,12 +746,15 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
       newly.forEach(function (k) { log.goalOrder.push(plan.names[k]); S.goalCount++; });
       if (S.goalCount === 1) aud('play', 'cheer');
       newly.forEach(function (k2) {
-        // 3着以降のゴールは短く実況（1・2着は写真判定の演出に任せる）
-        if (S.photoShot && !S.cm.busy && !(S.hold && now < S.hold) && plan.rankOf && plan.rankOf[k2] >= 2) say('goal', k2, null, 'normal');
+        if (!(plan.rankOf && plan.rankOf[k2] >= 2)) return;
+        // 3着以降はゴールの瞬間に着順スタンプ（音）。実況は判定の発表が済んでから短く
+        aud('play', 'stamp');
+        if (S.photoShot && !S.cm.busy && S.revealT >= 0 && !(S.hold && now < S.hold)) say('goal', k2, null, 'normal');
       });
       if (S.goalCount >= plan.n) S.allGoalT = t;
     }
-    if (S.allGoalT >= 0 && t - S.allGoalT >= 1000) showResult();
+    // v4: 写真判定の発表とカットインを見せ終わるまで結果画面に切り替えない（2〜4人でも判定が見える）
+    if (S.allGoalT >= 0 && t - S.allGoalT >= 1000 && S.verdictAt && now - S.verdictAt >= RESULT_AFTER_VERDICT_MS / speed) showResult();
   }
 
   // ---------- 写真判定 ----------
@@ -669,12 +774,43 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     later(function () { lamps[1].className = 'on'; aud('play', 'lamp'); }, 800 / speed);
     later(function () {
       lamps[2].className = 'on final'; aud('play', 'lampFinal');
-      verdict.textContent = '1着 ' + plan.names[plan.photo.a] + 'さん！（ハナ差 ' + diff + '秒）';
     }, 2400 / speed);
-    later(function () { if (S === st) film.classList.add('hidden'); }, 6200 / speed);
+    // ドラムロール（約1.6秒）が終わった瞬間に発表 → 勝者カットイン
+    later(function () {
+      if (S !== st) return;
+      verdict.textContent = '1着 ' + plan.names[plan.photo.a] + 'さん！（ハナ差 ' + diff + '秒）';
+      st.verdictAt = performance.now();
+      st.revealT = st.t;
+      log.verdictShown = true;
+      aud('play', 'stamp');
+      aud('speak', '1着は' + plan.names[plan.photo.a] + 'さん！', 'ana', { priority: 'high', maxWaitMs: 1500, fallbackMs: 1 });
+      showCutin(plan.photo.a);
+    }, 4050 / speed);
+    later(function () { if (S === st) film.classList.add('hidden'); }, 5000 / speed);
+  }
+
+  // 勝者カットイン：1着の顔と名前を画面いっぱいの斜めの帯で「ドン！」と出す
+  var RESULT_AFTER_VERDICT_MS = 2600;
+  function showCutin(i) {
+    var el = $('cutin'), lk = rend && rend.looks && rend.looks[i];
+    var face = lk && lk.faces ? lk.faces.win : '🥳';
+    var hat = lk && typeof lk.hat === 'string' ? ({ horn: '🦄', prop: '🌀' }[lk.hat] || lk.hat) : '';
+    el.innerHTML = '<div class="ciBand"><div class="ciFace">' + esc(hat) + '<br>' + esc(face) + '</div>' +
+      '<div class="ciText"><div class="ciRank">🏆 1着</div><div class="ciName">' + esc(S.plan.names[i]) + 'さん</div>' +
+      '<div class="ciSub">トップバッター決定！</div></div></div>';
+    el.classList.remove('hidden');
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+    aud('play', 'cutin');
+    later(function () { el.classList.add('hidden'); }, 2300 / speed);
   }
 
   // ---------- 結果画面 ----------
+  // 名前の見た目の幅（全角=1、半角=0.55）から、表彰台に1行で収まる文字の大きさ(em)を決める
+  function fitEm(name, fitChars) {
+    var w = 0;
+    for (var i = 0; i < name.length; i++) w += /[\u0000-\u00ff\uff61-\uff9f]/.test(name.charAt(i)) ? 0.55 : 1;
+    return w <= fitChars ? 1 : Math.max(0.45, fitChars / w);
+  }
   function timeStr(mins) { mins = ((mins % 1440) + 1440) % 1440; return pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60); }
 
   // 走者の見た目（renderer.looks[i]）を乗り物＋帽子＋顔で小さく添える。looks が無ければ乗り物のみ。
@@ -709,7 +845,10 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     [1, 0, 2].filter(function (r) { return r < Math.min(n, 3); }).forEach(function (r) {
       var d = document.createElement('div');
       d.className = 'pod p' + (r + 1);
-      d.innerHTML = '<div class="who">' + lookHtml(order[r], r) + esc(plan.names[order[r]]) + '</div><div class="block">' + medals[r] + ' ' + (r + 1) + '</div>';
+      // v4: 絵文字は名前の上の行に分け、名前は長さに合わせて文字を小さくする（「前後…」のように切れないように）
+      var name = plan.names[order[r]];
+      d.innerHTML = '<div class="who"><div class="whoLk">' + lookHtml(order[r], r) + '</div><div class="whoNm" style="font-size:' +
+        fitEm(name, r === 0 ? 5 : 5.5).toFixed(2) + 'em">' + esc(name) + '</div></div><div class="block">' + medals[r] + ' ' + (r + 1) + '</div>';
       pod.appendChild(d);
     });
 
@@ -762,9 +901,9 @@ var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
     var first = plan.names[plan.order[0]], lastN = plan.names[plan.order[plan.n - 1]];
     var lines = [
       ['ana', 'トップバッターは' + first + 'さん！'],
-      ['kai', pickOne(['いきなりですね', '準備できてますか？', '心の準備をどうぞ'])],
+      ['kai', pickOne(['先陣、お願いします', '一番乗りです！', '勢いそのままでどうぞ'])],
       ['ana', '大トリは' + lastN + 'さん！'],
-      ['kai', pickOne(['ハードル上がりましたね', 'のんびり走った分、期待です', '最後に全部持っていく人です'])]
+      ['kai', pickOne(['締めくくり、楽しみです', '最後まで目が離せません', '主役は最後に登場です'])]
     ];
     function go(k) {
       if (S !== st || S.phase !== 'result' || k >= lines.length) return;

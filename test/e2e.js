@@ -63,9 +63,10 @@ const CASES = [
     const same = JSON.stringify(log.goalOrder) === JSON.stringify(log.resultOrder);
     const complete = log.goalOrder.length === c.n && new Set(log.goalOrder).size === c.n && names.every((x) => log.goalOrder.includes(x));
     const errs = errors.concat(log.errors || []);
-    const ok = same && complete && errs.length === 0;
+    const verdict = log.verdictShown === true;   // v4: 写真判定の「1着 ○○さん！」が結果画面の前に出たか
+    const ok = same && complete && verdict && errs.length === 0;
     allOk = allOk && ok;
-    report.push({ n: c.n, speed: c.speed, ok, sameOrder: same, complete, wallSec: +wall.toFixed(1), goalOrder: log.goalOrder.join(','), errors: errs });
+    report.push({ n: c.n, speed: c.speed, ok, sameOrder: same, complete, verdict, wallSec: +wall.toFixed(1), goalOrder: log.goalOrder.join(','), errors: errs });
     await page.close();
   }
   await browser.close();
