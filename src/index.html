@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>月例発表会カップ - 発表順決めレース</title>
+<!--STYLE-->
+</head>
+<body>
+
+<div id="controls">
+  <button id="btnSound" type="button" title="音のオン/オフ">🔊 音 ON</button>
+  <button id="btnSpeech" type="button" title="実況の読み上げ">🗣 読み上げ ON</button>
+  <button id="btnShare" type="button" title="Teams共有の注意">ℹ 音の共有</button>
+</div>
+<div id="shareNote" hidden>Teamsで音を共有するには『コンピューターのサウンドを含める』をオン</div>
+
+<!-- 準備 -->
+<section id="setup" class="screen active">
+  <div class="logo">
+    <div class="logoTop">★ MONTHLY PRESENTATION CUP ★</div>
+    <div class="logoMain"><span class="trophy">🏆</span>月例発表会カップ</div>
+    <div class="logoSub">発表順決めレース</div>
+  </div>
+  <div class="setupBody">
+    <label class="fieldLabel" for="names">出走メンバー（1行に1人・貼り付けOK）</label>
+    <textarea id="names" spellcheck="false" autocomplete="off"></textarea>
+    <div class="opts">
+      <label>発表開始時刻 <input id="optStart" type="text" value="13:00" size="5" inputmode="numeric"></label>
+      <label>1人あたり <input id="optMin" type="number" value="8" min="1" max="120"> 分</label>
+      <label class="chk"><input id="optSpeech" type="checkbox" checked> 実況を読み上げる</label>
+    </div>
+    <div id="setupMsg" class="msg"></div>
+    <button id="btnStart" type="button" class="bigBtn">🏁 スタート（スペース）</button>
+  </div>
+</section>
+
+<!-- レース -->
+<section id="race" class="screen">
+  <canvas id="cv"></canvas>
+  <div id="telop" class="hidden"></div>
+  <div id="spurt" class="hidden"></div>
+  <div id="sub" class="hidden"></div>
+  <div id="freezeMsg" class="hidden"></div>
+  <div id="count" class="hidden"></div>
+  <div id="intro" class="hidden"></div>
+  <div id="film" class="hidden">
+    <div class="filmStrip">
+      <div class="filmWin"><canvas id="filmCv"></canvas><div class="filmTag">PHOTO FINISH</div></div>
+    </div>
+    <div class="filmInfo">
+      <div id="lamps"><i></i><i></i><i></i></div>
+      <div id="verdict"></div>
+    </div>
+  </div>
+  <div id="skipHint" class="hidden">スペース / クリックでスキップ</div>
+</section>
+
+<!-- 結果 -->
+<section id="result" class="screen">
+  <div id="confetti"></div>
+  <div class="resHead">
+    <div class="resTitle">🏆 発表順が決まりました！</div>
+    <button id="envelope" type="button" class="env"></button>
+  </div>
+  <div id="podium"></div>
+  <ol id="orderList"></ol>
+  <div class="resBtns">
+    <button id="btnCopy" type="button">📋 タイムテーブルをコピー</button>
+    <button id="btnAgain" type="button" class="primary">🔁 もう一度</button>
+    <button id="btnChange" type="button">✏ メンバー変更</button>
+  </div>
+</section>
+
+<!--SCRIPTS-->
+</body>
+</html>

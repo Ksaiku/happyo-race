@@ -1,0 +1,3365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>月例発表会カップ - 発表順決めレース</title>
+<style>
+:root{
+  --bg:#0a0f24; --bg2:#141c3d; --fg:#ffffff; --dim:#b9c4ee;
+  --gold:#ffd23f; --cyan:#3be0ff; --red:#ff4d6d; --green:#5dff9c;
+  --ana:#ffb347; --kai:#7fe3ff;
+  font-family:"Yu Gothic UI","Meiryo","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:var(--bg);color:var(--fg)}
+body{background:radial-gradient(ellipse at 50% 0%,#1f2a63 0%,var(--bg) 65%)}
+button,input,textarea{font-family:inherit}
+.hidden{display:none !important}
+[hidden]{display:none !important}
+.screen{position:absolute;inset:0;display:none;overflow:hidden}
+.screen.active{display:flex;flex-direction:column}
+
+/* 右上コントロール */
+#controls{position:fixed;top:.5vh;right:1vw;z-index:100;display:flex;gap:8px}
+#controls button{background:#000a;color:var(--fg);border:2px solid #fff8;border-radius:999px;padding:3px 12px;font-size:clamp(14px,1.7vh,22px);font-weight:700;cursor:pointer}
+#controls button.off{opacity:.6;text-decoration:line-through}
+#controls button:hover{border-color:var(--gold)}
+#shareNote{position:fixed;top:calc(1vh + 52px);right:1vw;z-index:100;max-width:34vw;background:#000d;border:2px solid var(--gold);border-radius:12px;padding:10px 14px;font-size:clamp(14px,1.8vh,22px);line-height:1.4}
+
+/* ロゴ */
+.logo{text-align:center;padding:3vh 2vw 1vh;flex:none}
+.logoTop{letter-spacing:.35em;color:var(--gold);font-weight:800;font-size:clamp(12px,1.8vh,22px)}
+.logoMain{display:inline-block;margin-top:.6vh;padding:.4vh 2vw;font-size:clamp(34px,7vh,92px);font-weight:900;letter-spacing:.06em;
+  background:linear-gradient(180deg,#fff 0%,#ffe27a 45%,#ff9f1c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 .5vh 0 #7a3b00) drop-shadow(0 0 1.6vh #ff9f1c88);
+  border-top:.6vh solid var(--gold);border-bottom:.6vh solid var(--gold)}
+.trophy{-webkit-text-fill-color:initial;margin-right:.4em}
+.logoSub{margin-top:.6vh;font-size:clamp(16px,2.6vh,34px);font-weight:800;color:var(--cyan);letter-spacing:.3em}
+
+/* 準備 */
+.setupBody{flex:1;min-height:0;display:flex;flex-direction:column;gap:1.2vh;width:min(900px,92vw);margin:0 auto;padding-bottom:2.5vh}
+.fieldLabel{font-size:clamp(16px,2.4vh,30px);font-weight:800;color:var(--gold)}
+#names{flex:1;min-height:0;resize:none;background:#05081a;color:var(--fg);border:3px solid var(--cyan);border-radius:14px;padding:1.2vh 1.2vw;font-size:clamp(20px,3.2vh,40px);line-height:1.35;font-weight:700}
+#names:focus{outline:none;border-color:var(--gold)}
+.opts{display:flex;flex-wrap:wrap;gap:1vh 2vw;align-items:center;font-size:clamp(16px,2.4vh,30px);font-weight:700}
+.opts input[type=text],.opts input[type=number]{background:#05081a;color:var(--fg);border:2px solid var(--cyan);border-radius:8px;padding:.3vh .6vw;font-size:inherit;font-weight:800;width:5.5em;text-align:center}
+.opts input[type=number]{width:4.2em}
+.opts .chk input{width:1.1em;height:1.1em;vertical-align:middle}
+.msg{min-height:2.4em;font-size:clamp(16px,2.4vh,30px);font-weight:800;color:var(--red)}
+.msg.ok{color:var(--green)}
+.bigBtn{flex:none;background:linear-gradient(180deg,#ffe27a,#ff9f1c);color:#2a1300;border:0;border-radius:16px;padding:1.4vh 2vw;font-size:clamp(24px,4.2vh,56px);font-weight:900;cursor:pointer;box-shadow:0 .8vh 0 #8a4a00}
+.bigBtn:hover{filter:brightness(1.08)}
+.bigBtn:active{transform:translateY(.5vh);box-shadow:0 .3vh 0 #8a4a00}
+.bigBtn:disabled{filter:grayscale(1) brightness(.6);cursor:not-allowed}
+
+/* レース */
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#telop{position:absolute;left:0;right:24vw;top:.7vh;text-align:center;z-index:20;pointer-events:none}
+#telop span{display:inline-block;max-width:74vw;padding:.4vh 1.6vw;background:#000e;border-top:.5vh solid var(--gold);border-bottom:.5vh solid var(--gold);
+  font-size:clamp(32px,5vh,100px);font-weight:900;line-height:1.2;text-shadow:0 0 1.2vh #000;animation:pop .3s ease-out}
+#telop.big span{color:var(--gold);font-size:clamp(34px,5.4vh,110px)}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+#telop.lc span{font-size:clamp(28px,4.2vh,84px);color:var(--cyan);border-color:var(--cyan);animation:pop .2s ease-out}
+#spurt{position:absolute;left:0;right:0;top:15vh;z-index:22;pointer-events:none;overflow:hidden;
+  background:repeating-linear-gradient(115deg,#c1121fe6 0 28px,#8a0a14e6 28px 56px);border-top:.6vh solid #fff;border-bottom:.6vh solid #fff;
+  animation:spurtIn .3s cubic-bezier(.2,1.3,.4,1) both,throb .5s ease-in-out .3s 2,spurtOut .35s ease-in 1.15s forwards}
+@keyframes spurtOut{to{transform:translateX(110%) skewX(-12deg);opacity:.2}}
+#spurt span{display:block;text-align:center;padding:.6vh 0;font-size:clamp(44px,8vh,150px);font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 .6vh 0 #000,0 0 3vh #ffd23f}
+@keyframes spurtIn{from{transform:translateX(-110%) skewX(-12deg)}to{transform:translateX(0) skewX(0)}}
+@keyframes throb{50%{filter:brightness(1.35)}}
+#sub{position:absolute;left:0;right:0;bottom:2vh;text-align:center;z-index:32;pointer-events:none}
+#sub span{display:inline-block;max-width:94vw;padding:.8vh 2vw;background:#000d;border-radius:14px;font-size:clamp(32px,3.4vh,70px);font-weight:800;line-height:1.3;border:.4vh solid currentColor}
+#sub.ana span{color:var(--ana)} #sub.kai span{color:var(--kai)}
+#sub b{font-size:.7em;margin-right:.6em;padding:0 .5em;border-radius:6px;background:currentColor}
+#sub b i{font-style:normal;color:#000}
+#sub .tx{color:#fff}
+#freezeMsg{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;background:#808080aa}
+#freezeMsg .fz{font-size:clamp(48px,9vh,140px);font-weight:900;color:#fff;text-shadow:0 0 2vh #000;letter-spacing:.1em}
+#freezeMsg .ring{width:10vh;height:10vh;border:1.2vh solid #fff5;border-top-color:#fff;border-radius:50%;margin-top:3vh;animation:spin 1s linear infinite}
+#freezeMsg.liar{background:transparent}
+#freezeMsg.liar .fz{color:var(--gold);animation:pop .3s ease-out}
+@keyframes spin{to{transform:rotate(360deg)}}
+#count{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:clamp(160px,38vh,520px);font-weight:900;color:var(--gold);
+  text-shadow:0 0 3vh #000,0 0 8vh #ff9f1c}
+#count span{animation:pop .4s ease-out}
+#skipHint{position:absolute;left:0;right:0;bottom:1.5vh;text-align:center;z-index:50;color:var(--dim);font-size:clamp(14px,2vh,26px);pointer-events:none}
+
+/* レース前ボード */
+#intro{position:absolute;inset:0;z-index:35;display:flex;align-items:center;justify-content:center;background:#050a1ccc;cursor:pointer}
+.board{width:min(1100px,90vw);text-align:center;padding:3vh 3vw;border-radius:28px;border:.8vh solid var(--gold);background:linear-gradient(180deg,#1b2a73,#0b1236);box-shadow:0 0 6vh #000;animation:pop .35s ease-out}
+.bTitle{font-size:clamp(28px,5vh,68px);font-weight:900;color:var(--gold);letter-spacing:.08em}
+.bBig{font-size:clamp(120px,26vh,360px);line-height:1.1}
+.bLabel{font-size:clamp(48px,9vh,130px);font-weight:900}
+.bText{margin-top:1vh;font-size:clamp(28px,5vh,68px);font-weight:800;color:var(--cyan);line-height:1.3}
+.board.envb .bBig{font-size:clamp(100px,20vh,280px)}
+.seal{display:inline-block;margin:1vh 0;padding:.6vh 2vw;border-radius:999px;background:radial-gradient(circle at 35% 30%,#ff7a8a,#b0102b);border:.6vh solid #7a0016;font-size:clamp(40px,8vh,110px);font-weight:900;letter-spacing:.12em;font-family:Consolas,"Courier New",monospace}
+
+/* 写真判定フィルム */
+#film{position:absolute;left:7vw;top:13vh;width:52vw;z-index:25;pointer-events:none;animation:pop .3s ease-out}
+.filmStrip{background:#050505;padding:3.4vh 1.2vw;border-radius:6px;
+  background-image:repeating-linear-gradient(90deg,transparent 0 14px,#d8d0b8 14px 28px);
+  background-size:100% 1.6vh;background-repeat:no-repeat;background-position:0 .7vh;position:relative;border:2px solid #222}
+.filmStrip::after{content:"";position:absolute;left:0;right:0;bottom:.7vh;height:1.6vh;background-image:repeating-linear-gradient(90deg,transparent 0 14px,#d8d0b8 14px 28px)}
+.filmWin{position:relative;border:3px solid #111;line-height:0}
+#filmCv{width:100%;height:auto;display:block;filter:sepia(.85) grayscale(.55) contrast(1.15) brightness(.95)}
+.filmTag{position:absolute;left:.6vw;top:.6vh;line-height:1.2;font-size:clamp(14px,2vh,28px);font-weight:900;color:#f3e6bd;background:#000a;padding:.2vh .6vw;letter-spacing:.2em}
+.filmInfo{display:flex;align-items:center;gap:1.4vw;margin-top:1vh;background:#000d;border-radius:12px;padding:1vh 1.2vw;min-height:9vh}
+#lamps{display:flex;gap:1vw;flex:none}
+#lamps i{display:block;width:5vh;height:5vh;border-radius:50%;background:#3a1010;border:.4vh solid #666;transition:none}
+#lamps i.on{background:radial-gradient(circle at 35% 30%,#fff,#ffd23f 40%,#ff7a00);box-shadow:0 0 3vh #ffb300;border-color:#fff}
+#lamps i.final{background:radial-gradient(circle at 35% 30%,#fff,#5dff9c 40%,#00b35a);box-shadow:0 0 4vh #5dff9c}
+#verdict{white-space:nowrap;font-size:clamp(24px,3.8vh,60px);font-weight:900;color:var(--gold);line-height:1.2}
+
+/* 結果 */
+#result{padding:1.5vh 2vw 1.5vh;gap:1vh}
+#confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5}
+#confetti i{position:absolute;top:-8vh;display:block;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(115vh) rotate(540deg)}}
+.resHead{flex:none;display:flex;align-items:center;justify-content:space-between;gap:2vw;padding-right:0;position:relative;z-index:6;padding-top:3.4vh}
+.resTitle{font-size:clamp(28px,5vh,72px);font-weight:900;color:var(--gold)}
+.env{background:#2a1f10;color:#fff;border:.4vh solid var(--gold);border-radius:14px;padding:.8vh 1.4vw;font-size:clamp(18px,2.8vh,38px);font-weight:800;cursor:pointer}
+.env b{font-family:Consolas,"Courier New",monospace;letter-spacing:.1em;color:var(--gold);font-size:1.15em}
+.env.open{background:#16361f;border-color:var(--green);animation:pop .4s ease-out}
+#podium{flex:none;height:31vh;display:flex;justify-content:center;align-items:flex-end;gap:1.4vw;position:relative;z-index:6}
+.pod{display:flex;flex-direction:column;align-items:center;width:26vw;max-width:420px}
+.pod .who{font-size:clamp(26px,4.4vh,64px);font-weight:900;text-align:center;line-height:1.15;padding-bottom:.6vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pod .block{width:100%;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;font-size:clamp(30px,5.6vh,80px);font-weight:900;color:#1a1000;padding-top:.4vh}
+.pod.p1 .block{height:15vh;background:linear-gradient(180deg,#fff0a0,#e0a800)}
+.pod.p2 .block{height:10.5vh;background:linear-gradient(180deg,#f2f5ff,#9aa6c4)}
+.pod.p3 .block{height:7vh;background:linear-gradient(180deg,#ffd0a0,#c0702a)}
+.pod.p1 .who{color:var(--gold);font-size:clamp(30px,5.2vh,76px)}
+#orderList{flex:1;min-height:0;margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr;grid-auto-flow:column;position:relative;z-index:6;
+  gap:.5vh 2vw;align-content:start;padding-top:.6vh}
+#orderList li{display:flex;align-items:center;gap:1.2vw;background:#ffffff14;border-left:.8vh solid var(--cyan);border-radius:8px;padding:0 1vw;
+  font-size:clamp(22px,3.5vh,50px);font-weight:900;white-space:nowrap;overflow:hidden;animation:pop .35s ease-out backwards}
+.vh{display:inline-block;margin-right:.15em}
+.lk{display:inline-block;margin-right:.3em;font-size:.85em;white-space:nowrap}
+#orderList .rk{color:var(--gold);min-width:1.6em;text-align:right}
+#orderList .nm{flex:1;overflow:hidden;text-overflow:ellipsis}
+#orderList .tm{color:var(--dim);font-size:.75em;font-weight:800}
+#orderList.two{grid-template-columns:1fr 1fr}
+.resBtns{flex:none;display:flex;gap:1.4vw;justify-content:center;position:relative;z-index:6;padding-top:.5vh}
+.resBtns button{background:#1e2b66;color:#fff;border:.4vh solid #fff8;border-radius:14px;padding:1vh 1.6vw;font-size:clamp(18px,2.8vh,38px);font-weight:900;cursor:pointer}
+.resBtns button.primary{background:linear-gradient(180deg,#ffe27a,#ff9f1c);color:#2a1300;border-color:#8a4a00}
+.resBtns button:hover{filter:brightness(1.15)}
+
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <button id="btnSound" type="button" title="音のオン/オフ">🔊 音 ON</button>
+  <button id="btnSpeech" type="button" title="実況の読み上げ">🗣 読み上げ ON</button>
+  <button id="btnShare" type="button" title="Teams共有の注意">ℹ 音の共有</button>
+</div>
+<div id="shareNote" hidden>Teamsで音を共有するには『コンピューターのサウンドを含める』をオン</div>
+
+<!-- 準備 -->
+<section id="setup" class="screen active">
+  <div class="logo">
+    <div class="logoTop">★ MONTHLY PRESENTATION CUP ★</div>
+    <div class="logoMain"><span class="trophy">🏆</span>月例発表会カップ</div>
+    <div class="logoSub">発表順決めレース</div>
+  </div>
+  <div class="setupBody">
+    <label class="fieldLabel" for="names">出走メンバー（1行に1人・貼り付けOK）</label>
+    <textarea id="names" spellcheck="false" autocomplete="off"></textarea>
+    <div class="opts">
+      <label>発表開始時刻 <input id="optStart" type="text" value="13:00" size="5" inputmode="numeric"></label>
+      <label>1人あたり <input id="optMin" type="number" value="8" min="1" max="120"> 分</label>
+      <label class="chk"><input id="optSpeech" type="checkbox" checked> 実況を読み上げる</label>
+    </div>
+    <div id="setupMsg" class="msg"></div>
+    <button id="btnStart" type="button" class="bigBtn">🏁 スタート（スペース）</button>
+  </div>
+</section>
+
+<!-- レース -->
+<section id="race" class="screen">
+  <canvas id="cv"></canvas>
+  <div id="telop" class="hidden"></div>
+  <div id="spurt" class="hidden"></div>
+  <div id="sub" class="hidden"></div>
+  <div id="freezeMsg" class="hidden"></div>
+  <div id="count" class="hidden"></div>
+  <div id="intro" class="hidden"></div>
+  <div id="film" class="hidden">
+    <div class="filmStrip">
+      <div class="filmWin"><canvas id="filmCv"></canvas><div class="filmTag">PHOTO FINISH</div></div>
+    </div>
+    <div class="filmInfo">
+      <div id="lamps"><i></i><i></i><i></i></div>
+      <div id="verdict"></div>
+    </div>
+  </div>
+  <div id="skipHint" class="hidden">スペース / クリックでスキップ</div>
+</section>
+
+<!-- 結果 -->
+<section id="result" class="screen">
+  <div id="confetti"></div>
+  <div class="resHead">
+    <div class="resTitle">🏆 発表順が決まりました！</div>
+    <button id="envelope" type="button" class="env"></button>
+  </div>
+  <div id="podium"></div>
+  <ol id="orderList"></ol>
+  <div class="resBtns">
+    <button id="btnCopy" type="button">📋 タイムテーブルをコピー</button>
+    <button id="btnAgain" type="button" class="primary">🔁 もう一度</button>
+    <button id="btnChange" type="button">✏ メンバー変更</button>
+  </div>
+</section>
+
+<script>
+/* core.js */
+var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
+
+RR.Core = (function () {
+  'use strict';
+
+  // ---------------------------------------------------------------- RNG
+  function randomSeed32() {
+    try {
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        return crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
+      }
+    } catch (e) { /* fallthrough */ }
+    try {
+      if (typeof require === 'function') {
+        return require('crypto').randomInt(0, 4294967296) >>> 0;
+      }
+    } catch (e2) { /* fallthrough */ }
+    return Math.floor(Math.random() * 4294967296) >>> 0;
+  }
+
+  function createRng(seed) {
+    var s;
+    if (seed === undefined || seed === null) s = randomSeed32();
+    else if (typeof seed === 'number') s = seed >>> 0;
+    else s = fnv1a(String(seed)) >>> 0;
+    return function () {
+      s = (s + 0x6D2B79F5) >>> 0;
+      var t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function shuffle(arr, rng) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
+  function fnv1a(str, seed) {
+    var h = (seed === undefined ? 0x811c9dc5 : seed) >>> 0;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function fmix(h) {
+    h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+    h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16;
+    return h >>> 0;
+  }
+
+  var SEAL_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+  function sealCode(order, names) {
+    var s = order.map(function (i) { return names[i]; }).join('\u0001') + '|' + order.join(',');
+    var h1 = fmix(fnv1a(s));
+    var h2 = fmix(fnv1a(s + '#seal', 0x2545F491));
+    var c = [];
+    for (var j = 0; j < 6; j++) c.push(SEAL_ALPHABET.charAt((h1 >>> (5 * j)) & 31));
+    c.push(SEAL_ALPHABET.charAt(h2 & 31));
+    return c[0] + c[1] + '-' + c[2] + c[3] + c[4] + '-' + c[5] + c[6];
+  }
+
+  // ---------------------------------------------------------------- data
+  var VEHICLES = [
+    { id: 'horse',   emoji: '🐎', label: '馬',                 counter: '頭' },
+    { id: 'snail',   emoji: '🐌', label: 'カタツムリ',         counter: '匹' },
+    { id: 'turtle',  emoji: '🐢', label: 'カメ',               counter: '匹' },
+    { id: 'duck',    emoji: '🦆', label: 'アヒル',             counter: '羽' },
+    { id: 'cart',    emoji: '🛒', label: 'ショッピングカート', counter: '台' },
+    { id: 'chair',   emoji: '🪑', label: 'イス',               counter: '脚' },
+    { id: 'pig',     emoji: '🐖', label: 'ブタ',               counter: '頭' },
+    { id: 'rocket',  emoji: '🚀', label: 'ロケット',           counter: '機' },
+    { id: 'bike',    emoji: '🚲', label: '自転車',             counter: '台' },
+    { id: 'penguin', emoji: '🐧', label: 'ペンギン',           counter: '羽' }
+  ];
+
+  var WEATHERS = [
+    { id: 'sunny',  emoji: '☀️',         label: '快晴',   forecast: '終日快晴、ただしレース後半にところにより波乱', note: '日差しは強いですが、走者には追い風と言えそうです' },
+    { id: 'rain',   emoji: '🌧️',   label: '雨',     forecast: '午後から本降り、足元の悪い中での勝負です',     note: '路面が滑りやすいので、転倒には要注意ですね' },
+    { id: 'fog',    emoji: '🌫️',   label: '濃霧',   forecast: '午後から濃霧、ところにより波乱',             note: '視界が悪く、思わぬ位置取りの変化が起きそうです' },
+    { id: 'snow',   emoji: '❄️',         label: '雪',     forecast: '大粒の雪が舞い、ところにより逆転',           note: '雪は走りにくいですが、その分展開が読めません' },
+    { id: 'sunset', emoji: '🌇',         label: '夕焼け', forecast: '夕焼けが広がり、終盤に大どんでん返しの予感', note: '夕日が長い影を作っています。終盤の駆け引きに注目です' },
+    { id: 'night',  emoji: '🌙',         label: '夜',     forecast: '月明かりの下、静かな夜のレースになります',   note: '暗い中でも名前札がよく見えます。見失わないように' },
+    { id: 'wind',   emoji: '💨',         label: '強風',   forecast: '強風注意、追い風と向かい風が入り乱れます',   note: '風向き次第で順位が入れ替わりますよ' }
+  ];
+
+  var TEXTS = {
+    stumble: ['{n}、まさかの転倒！', '{n}、落とし物を拾いに戻る！', '{n}、靴ひもが…！立ち止まった！', '{n}、突然のストップ！'],
+    boost:   ['{n}、急加速！', '{n}、ターボ点火！', '{n}、追い風をつかんだ！'],
+    reverse: ['{n}、まさかの逆走！？', '{n}、忘れ物に気づいて引き返す！？', '{n}、道を間違えた！？'],
+    swap:    ['閃光！{n}と{m}が入れ替わった！？', 'まぶしい！{n}と{m}の位置が入れ替わった！？', '謎の光！{n}と{m}が入れ替わった！？']
+  };
+
+  // material for the app's live commentary ({n}, {m} = "名前さん")
+  var PHRASES = {
+    lead:   ['{n}が先頭！', '先頭は{n}！', '{n}、前に出た！'],
+    change: ['先頭交代！{n}！', '{n}が抜いた！', '{n}がトップ！'],
+    chase:  ['{n}、追い上げる！', '{n}が迫る！', '{n}、じわじわ前へ！'],
+    last:   ['{n}、まだ諦めない！', '{n}、最後尾から！'],
+    final:  ['ラストスパート！', '勝負はここから！'],
+    photo:  ['{n}か！{m}か！', '{n}と{m}、並んだ！']
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function w(x) { return x >= 1 ? 0 : (x <= 0 ? 1 : 0.5 * (1 + Math.cos(Math.PI * x))); }
+  function ease(x) { return x <= 0 ? 0 : (x >= 1 ? 1 : 0.5 * (1 - Math.cos(Math.PI * x))); }
+  function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+
+  // monotone cubic Hermite (PCHIP) through strictly increasing knots, sampled on K+1 uniform steps over [0,T]
+  function pchipTable(X, Y, T, K) {
+    var m = X.length, h = [], d = [], i;
+    for (i = 0; i < m - 1; i++) { h.push(X[i + 1] - X[i]); d.push((Y[i + 1] - Y[i]) / h[i]); }
+    var sl = new Array(m);
+    sl[0] = d[0]; sl[m - 1] = d[m - 2];
+    for (i = 1; i < m - 1; i++) {
+      if (d[i - 1] <= 0 || d[i] <= 0) sl[i] = 0;
+      else {
+        var w1 = 2 * h[i] + h[i - 1], w2 = h[i] + 2 * h[i - 1];
+        sl[i] = (w1 + w2) / (w1 / d[i - 1] + w2 / d[i]);
+      }
+    }
+    var out = new Float64Array(K + 1), j = 0;
+    for (var k = 0; k <= K; k++) {
+      var x = T * k / K;
+      while (j < m - 2 && x > X[j + 1]) j++;
+      var hh = h[j], u = (x - X[j]) / hh, u2 = u * u, u3 = u2 * u;
+      out[k] = (2 * u3 - 3 * u2 + 1) * Y[j] + (u3 - 2 * u2 + u) * hh * sl[j] +
+        (-2 * u3 + 3 * u2) * Y[j + 1] + (u3 - u2) * hh * sl[j + 1];
+    }
+    out[0] = 0; out[K] = 1;
+    return out;
+  }
+
+  // ---------------------------------------------------------------- planRace
+  function planRace(names, opts) {
+    opts = opts || {};
+    var n = names.length;
+    if (n < 2) throw new RangeError('planRace: need at least 2 names');
+    var rng = opts.rng || createRng(opts.seed);
+
+    var idx = [];
+    for (var q = 0; q < n; q++) idx.push(q);
+    var order = shuffle(idx, rng);
+    var rankOf = new Array(n);
+    for (q = 0; q < n; q++) rankOf[order[q]] = q;
+
+    // ---- finish times
+    var R = 26000 + Math.floor(rng() * 3001); // v3: 26〜29秒（掛け合い実況の尺）
+    var gaps = [40 + Math.floor(rng() * 81)];
+    for (q = 1; q < n - 1; q++) gaps.push(220 + Math.floor(rng() * 481));
+    var total = 0;
+    for (q = 0; q < gaps.length; q++) total += gaps[q];
+    var t0 = R - total;
+    var finishTime = new Array(n);
+    var acc = t0;
+    finishTime[order[0]] = t0;
+    for (q = 1; q < n; q++) { acc += gaps[q - 1]; finishTime[order[q]] = acc; }
+    var a = order[0], b = order[1];
+    var t1 = finishTime[b];
+    var slowFrom = t0 - 1400 + Math.floor(rng() * 201) - 100;
+
+    var vehicle = pick(VEHICLES, rng);
+    var weather = pick(WEATHERS, rng);
+
+    // ---- base curves (monotone, 0 -> 1 exactly at finishTime)
+    var K = 600;
+    var tables = new Array(n);
+    function buildTable(i) {
+      var T = finishTime[i];
+      var ur = 1 - 2600 / T;
+      var amps = [], fr = [], ph = [], ws = 0, j;
+      for (j = 0; j < 3; j++) {
+        var wt = 0.4 + rng();
+        amps.push(wt); ws += wt;
+        fr.push(0.8 + rng() * 2.6);
+        ph.push(rng() * 2 * Math.PI);
+      }
+      var tot = 0.30 + 0.10 * rng();
+      for (j = 0; j < 3; j++) amps[j] = tot * amps[j] / ws;
+      var c;
+      if (i === a) c = -(0.15 + 0.04 * rng());        // winner: hold back early, charge late
+      else if (i === b) c = 0.08 + 0.05 * rng();      // runner-up: lead early
+      else c = (rng() - 0.5) * 0.10;
+      function v(u) {
+        if (u >= ur) return 1;
+        var s = u / ur;
+        var g = s < 0.72 ? Math.sin(Math.PI * s / 0.72) : -2.571 * Math.sin(Math.PI * (s - 0.72) / 0.28);
+        var tp = s < 0.8 ? 1 : 0.5 * (1 + Math.cos(Math.PI * (s - 0.8) / 0.2));
+        var nz = 0;
+        for (var k = 0; k < 3; k++) nz += amps[k] * Math.sin(2 * Math.PI * fr[k] * u + ph[k]);
+        return 1 + c * g + nz * tp;
+      }
+      var P = new Float64Array(K + 1);
+      var prev = v(0);
+      for (var k = 1; k <= K; k++) {
+        var cur = v(k / K);
+        P[k] = P[k - 1] + (prev + cur) * 0.5 / K;
+        prev = cur;
+      }
+      var Z = P[K];
+      for (k = 0; k <= K; k++) P[k] /= Z;
+      P[K] = 1;
+      return P;
+    }
+    var oldTables = new Array(n);
+    for (q = 0; q < n; q++) oldTables[q] = buildTable(q);
+    function tabAt(tb, T, t) {
+      if (t <= 0) return 0;
+      if (t >= T) return 1;
+      var x = t / T * K, k = Math.floor(x);
+      if (k >= K) k = K - 1;
+      return tb[k] + (tb[k + 1] - tb[k]) * (x - k);
+    }
+
+    // ---- endgame pack: everybody bunches up by finalFrom, stays tangled (lead rotates) until ~3s before the
+    //      winner finishes, then the field spreads out in finishing order. Built by re-fitting the base curves.
+    var finalFrom = Math.round(t0 - 5000);
+    var tG = finalFrom + 2000;
+    var tA = finalFrom - 4500;
+    var gF = 0.28;
+    var sumOld = 0, sumE = 0, j;
+    for (q = 0; q < n; q++) { sumOld += tabAt(oldTables[q], finishTime[q], finalFrom); sumE += finishTime[q] - t0; }
+    var vf = (1 - sumOld / n) / (5000 + gF * sumE / n);   // pack speed (progress per ms)
+    vf = Math.min(0.0002, Math.max(0.000035, vf));
+    var Lc = 1 - 5000 * vf;                                  // winner's straight line at finalFrom
+    var knotT = [finalFrom, finalFrom + 700, finalFrom + 1400, tG];
+    var p0 = [], vi = [];
+    for (q = 0; q < n; q++) {
+      var Tq = finishTime[q];
+      var oa = tabAt(oldTables[q], Tq, tA);
+      var pp = Lc - gF * (Tq - t0) * vf;
+      pp = Math.max(oa + 0.25 * vf * 4500, Math.min(oa + 2.2 * vf * 4500, pp));
+      pp = Math.min(pp, 1 - 0.3 * vf * (Tq - finalFrom));
+      p0.push(pp);
+      vi.push((1 - pp) / (Tq - finalFrom));
+    }
+    var aBehind = n >= 3 && rng() < 0.55;                    // winner sometimes strikes from the back in the last 3s
+    var danceBase = order.slice(0, Math.min(n, 5));
+    var dance = aBehind ? danceBase.slice(1) : danceBase;
+    var seq = [], prevC = -1;
+    for (j = 0; j < 3; j++) {
+      var cand = dance.filter(function (x) { return x !== prevC; });
+      prevC = cand[Math.floor(rng() * cand.length)];
+      seq.push(prevC);
+    }
+    var amp = vf * 180;
+    var vals = [];
+    for (j = 0; j < 4; j++) {
+      var row = [];
+      for (q = 0; q < n; q++) {
+        var base = p0[q] + vi[q] * (knotT[j] - finalFrom);
+        row.push(j < 3 ? base + (rng() * 2 - 1) * amp : base);
+      }
+      if (aBehind) row[a] -= vf * (j < 3 ? 250 + 200 * rng() : 200 + 80 * rng());
+      if (j < 3) {
+        var cc = seq[j], M = -1;
+        for (q = 0; q < n; q++) if (q !== cc && row[q] > M) M = row[q];
+        if (row[cc] < M + vf * 40) row[cc] = M + vf * (40 + 60 * rng());
+      }
+      vals.push(row);
+    }
+    for (q = 0; q < n; q++) {
+      var T2 = finishTime[q], X = [], Y = [], kk;
+      var kA = Math.floor(tA * K / T2);
+      for (kk = 0; kk <= kA; kk++) { X.push(T2 * kk / K); Y.push(oldTables[q][kk]); }
+      var pX = X[X.length - 1], pY = Y[Y.length - 1];
+      for (j = 0; j < 4; j++) {
+        var yv = vals[j][q];
+        var minInc = 0.2 * vi[q] * (knotT[j] - pX);
+        if (yv < pY + minInc) yv = pY + minInc;
+        yv = Math.min(yv, 1 - 0.1 * vi[q] * (T2 - knotT[j]));
+        X.push(knotT[j]); Y.push(yv); pX = knotT[j]; pY = yv;
+      }
+      X.push(T2); Y.push(1);
+      tables[q] = pchipTable(X, Y, T2, K);
+    }
+
+    function bprog(i, t) {
+      var T = finishTime[i];
+      if (t <= 0) return 0;
+      if (t >= T) return 1;
+      var x = t / T * K;
+      var k = Math.floor(x);
+      if (k >= K) k = K - 1;
+      var tb = tables[i];
+      return tb[k] + (tb[k + 1] - tb[k]) * (x - k);
+    }
+
+    // ---- freeze
+    var freeze = null;
+    if (rng() < 0.35) {
+      var ft = Math.round(R * (0.30 + 0.30 * rng()));
+      if (ft > slowFrom - 1500) ft = slowFrom - 1500;
+      freeze = { t: ft, dur: 1600 };
+    }
+
+    // ---- events (additive offsets on the base curve)
+    function nm(i) { return names[i] + 'さん'; }
+
+    function makeEffect(type, te, dur, r, r2, par) {
+      var e = { type: type, te: te, dur: dur, r: r, r2: r2 };
+      var b0, L;
+      if (type === 'stumble') {
+        var hold = bprog(r, te), after = bprog(r, te + dur);
+        var d = after - hold;
+        L = Math.max(2 * d, 1e-4);
+        e.off = function (i, t) {
+          if (t < te) return 0;
+          if (t < te + dur) return hold - bprog(i, t);
+          return -d * w((bprog(i, t) - after) / L);
+        };
+      } else if (type === 'boost') {
+        b0 = bprog(r, te + dur); L = 2.2 * par;
+        e.off = function (i, t) {
+          if (t < te) return 0;
+          if (t < te + dur) return par * ease((t - te) / dur);
+          return par * w((bprog(i, t) - b0) / L);
+        };
+      } else if (type === 'reverse') {
+        b0 = bprog(r, te + dur); L = 2 * par;
+        e.off = function (i, t) {
+          if (t < te) return 0;
+          if (t < te + dur) return -par * ease((t - te) / dur);
+          return -par * w((bprog(i, t) - b0) / L);
+        };
+      } else { // swap
+        var dr = bprog(r2, te) - bprog(r, te);
+        var base = {}; base[r] = bprog(r, te); base[r2] = bprog(r2, te);
+        var dl = {}; dl[r] = dr; dl[r2] = -dr;
+        L = Math.max(2.2 * Math.abs(dr), 1e-4);
+        e.off = function (i, t) {
+          if (t < te) return 0;
+          return dl[i] * w((bprog(i, t) - base[i]) / L);
+        };
+      }
+      return e;
+    }
+
+    function scanEnd(e, limit) {
+      var tm;
+      for (tm = e.te + e.dur; tm <= limit + 25; tm += 25) {
+        if (e.off(e.r, tm) === 0 && (e.r2 < 0 || e.off(e.r2, tm) === 0)) return tm;
+      }
+      return Infinity;
+    }
+
+    var pool = idx.slice(); // every runner (any final rank) can be an event target
+    var placed = [];
+    var effects = [];
+
+    function tryPlace(type) {
+      var hiT = slowFrom - 3000;
+      for (var att = 0; att < 400; att++) {
+        var te = 3600 + Math.floor(rng() * (hiT - 3600 + 1));
+        var sp = att < 150 ? 1400 : 0;
+        var ranked = pool.slice().sort(function (x, y) { return bprog(y, te) - bprog(x, te); });
+        var r = -1, r2 = -1, par = 0, dur = 0, text;
+        if (type === 'stumble') {
+          r = pool[Math.floor(rng() * pool.length)];
+          dur = 800 + Math.floor(rng() * 401);
+          text = pick(TEXTS.stumble, rng).replace('{n}', nm(r));
+        } else if (type === 'boost') {
+          // uniform over everyone; trailing runners are merely favoured (leaders accepted half the time)
+          for (var bt = 0; bt < 4; bt++) {
+            r = pool[Math.floor(rng() * pool.length)];
+            if (ranked.indexOf(r) >= ranked.length / 2 || rng() < 0.5) break;
+          }
+          par = 0.06 + rng() * 0.03; dur = 1200;
+          text = pick(TEXTS.boost, rng).replace('{n}', nm(r));
+        } else if (type === 'reverse') {
+          r = pool[Math.floor(rng() * pool.length)];
+          par = 0.05 + rng() * 0.03; dur = 700;
+          text = pick(TEXTS.reverse, rng).replace('{n}', nm(r));
+        } else {
+          if (pool.length < 2) return false;
+          var bestD = -1;
+          for (var m = 0; m < 6; m++) {
+            var x = pool[Math.floor(rng() * pool.length)];
+            var y = pool[Math.floor(rng() * pool.length)];
+            if (x === y) continue;
+            var dd = Math.abs(bprog(x, te) - bprog(y, te));
+            if (dd > bestD) { bestD = dd; r = x; r2 = y; }
+          }
+          if (r < 0 || (bestD < 0.03 && att < 250)) continue;
+          dur = 500;
+          text = pick(TEXTS.swap, rng).replace('{n}', nm(r)).replace('{m}', nm(r2));
+        }
+        var limit = Math.min(slowFrom, finishTime[r] - 2500);
+        if (att < 250 && limit > finalFrom) limit = finalFrom; // prefer events that finish before the pack forms
+        if (r2 >= 0) limit = Math.min(limit, finishTime[r2] - 2500);
+        if (te + dur > limit) continue;
+        var eff = makeEffect(type, te, dur, r, r2, par);
+        var end = scanEnd(eff, limit);
+        if (end > limit) continue;
+        if (freeze && freeze.t >= te - 500 && freeze.t <= end + 300) continue;
+        var bad = false;
+        for (var p = 0; p < placed.length; p++) {
+          var pe = placed[p];
+          if (Math.abs(te - pe.t) < sp) { bad = true; break; }
+          var shared = pe.runner === r || pe.runner === r2 ||
+            (pe.runner2 >= 0 && (pe.runner2 === r || pe.runner2 === r2));
+          if (shared && !(te >= pe.end + 200 || pe.t >= end + 200)) { bad = true; break; }
+        }
+        if (bad) continue;
+        var ev = { t: te, dur: dur, type: type, runner: r, text: text, end: end };
+        if (r2 >= 0) ev.runner2 = r2;
+        placed.push({ t: te, end: end, runner: r, runner2: r2 });
+        effects.push(eff);
+        events.push(ev);
+        return true;
+      }
+      return false;
+    }
+
+    var events = [];
+    var want = 2 + Math.floor(rng() * 3);
+    var types = shuffle(['stumble', 'boost', 'reverse', 'swap'], rng);
+    var ti;
+    for (ti = 0; ti < types.length && events.length < want; ti++) tryPlace(types[ti]);
+    for (ti = 0; ti < types.length && events.length < 2; ti++) tryPlace(types[ti]);
+    events.sort(function (x, y) { return x.t - y.t; });
+
+    // ---- progress
+    function finale(i, t) {
+      if (t <= t0 - 2000 || t >= t0 - 200) return 0;
+      var s = Math.sin(Math.PI * (t - (t0 - 2000)) / 1800);
+      s *= s;
+      return i === a ? -0.004 * s : 0.012 * s;
+    }
+
+    function progress(i, t) {
+      var T = finishTime[i];
+      if (t <= 0) return 0;
+      if (t >= T) return 1;
+      var p = bprog(i, t);
+      for (var k = 0; k < effects.length; k++) {
+        var e = effects[k];
+        if (e.r === i || e.r2 === i) p += e.off(i, t);
+      }
+      if (i === a || i === b) p += finale(i, t);
+      return p < 0 ? 0 : (p > 0.999 ? 0.999 : p);
+    }
+
+    function leaderAt(t) {
+      var best = order[0], bv = progress(best, t);
+      for (var k = 1; k < n; k++) {
+        var v = progress(order[k], t);
+        if (v > bv) { bv = v; best = order[k]; }
+      }
+      return best;
+    }
+
+    // ---- lead changes (sampled every 50ms; A->B->A within 400ms is dropped as flicker; baseline = leaderAt(50))
+    function computeLeadChanges() {
+      var raw = [], prev = leaderAt(50), tt, L, out = [];
+      for (tt = 100; tt <= t0 + 50; tt += 50) {
+        L = leaderAt(tt);
+        if (L !== prev) { raw.push({ t: tt, leader: L, from: prev }); prev = L; }
+      }
+      raw.forEach(function (c) {
+        var last = out[out.length - 1];
+        if (last && last.from === c.leader && c.t - last.t <= 400) out.pop();
+        else out.push(c);
+      });
+      return out.map(function (c) { return { t: c.t, leader: c.leader }; });
+    }
+
+    // rank (0 = leader) per runner index; ties broken by finishing order, consistent with leaderAt
+    function positionAt(t) {
+      var pr = new Array(n), res = new Array(n), i2, j2;
+      for (i2 = 0; i2 < n; i2++) pr[i2] = progress(i2, t);
+      for (i2 = 0; i2 < n; i2++) {
+        var c2 = 0;
+        for (j2 = 0; j2 < n; j2++) {
+          if (j2 !== i2 && (pr[j2] > pr[i2] || (pr[j2] === pr[i2] && rankOf[j2] < rankOf[i2]))) c2++;
+        }
+        res[i2] = c2;
+      }
+      return res;
+    }
+
+    // ---- commentary: only the pre-race intro (negative times); in-race lines are generated by the app
+    var vname = vehicle.emoji + vehicle.label;
+    var commentary = [
+      { t: -4500, role: 'ana', text: '本日の天気は' + weather.emoji + weather.label + '！' + weather.forecast + '！' },
+      { t: -2300, role: 'kai', text: '本日の乗り物は' + vname + '。' + n + vehicle.counter + 'が一斉にスタートします。' + weather.note }
+    ];
+
+    return {
+      n: n,
+      names: names.slice(),
+      order: order,
+      rankOf: rankOf,
+      finishTime: finishTime,
+      raceEnd: R,
+      photo: { a: a, b: b, t0: t0, t1: t1 },
+      slowFrom: slowFrom,
+      events: events,
+      freeze: freeze,
+      vehicle: vehicle,
+      weather: weather,
+      sealCode: sealCode(order, names),
+      commentary: commentary,
+      finalFrom: finalFrom,
+      leadChanges: computeLeadChanges(),
+      positionAt: positionAt,
+      progress: progress,
+      baseProgress: bprog,
+      leaderAt: leaderAt
+    };
+  }
+
+  return {
+    createRng: createRng,
+    shuffle: shuffle,
+    VEHICLES: VEHICLES,
+    WEATHERS: WEATHERS,
+    planRace: planRace,
+    PHRASES: PHRASES,
+    sealCode: sealCode
+  };
+})();
+
+if (typeof module !== 'undefined') module.exports = RR.Core;
+
+</script>
+<script>
+/* audio.js */
+/*
+ * src/audio.js -> RR.Audio  (Web Audio API で合成。音声ファイル不使用)
+ *
+ * API:
+ *   init()                 最初のユーザー操作時に呼ぶ。AudioContext作成/resume。何度呼んでも安全
+ *   setMuted(bool)         ミュート（全ての音と読み上げを止める）
+ *   isMuted()
+ *   play(name)             'tick','go','boost','stumble','reverse','swap','freeze','unfreeze',
+ *                          'lamp','lampFinal','shutter','fanfare','cheer'
+ *   startLoop()            足音リズム＋控えめベース
+ *   stopLoop()
+ *   setSlow(bool)          ループのテンポ/ピッチを落とし、心音を重ねる
+ *   speak(text, role)      'ana' | 'kai'。ja-JP かつ localService===true の音声のみ
+ *   setSpeech(bool)
+ *   isSpeechOn()
+ *   speechAvailable()
+ *   cancelSpeech()
+ *
+ * どの関数も例外を投げない。AudioContext が無い環境（Node 等）では黙って無視する。
+ */
+var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
+
+RR.Audio = (function () {
+  'use strict';
+
+  var MASTER_VOL = 0.35;
+
+  var ctx = null;
+  var master = null;
+  var noiseBuf = null;
+  var muted = false;
+  var speechOn = true;
+  var slow = false;
+
+  // ---- loop state ----
+  var loopOn = false;
+  var loopTimer = null;
+  var loopBus = null;
+  var nextStepTime = 0;
+  var stepIdx = 0;
+  var nextBeatTime = 0;
+  var tension = 0;
+  var ambBus = null, heartBus = null, ambNodes = [];
+
+  // ---- speech state ----
+  var voices = [];
+  var voicesLoaded = false;
+  var speaking = false;      // 実発話が進行中（またはキュー済み）
+  var speakSeq = 0;
+  var curFinish = null;
+
+  function safe(fn) {
+    return function () {
+      try { return fn.apply(this, arguments); } catch (e) { return undefined; }
+    };
+  }
+
+  // ---------------------------------------------------------------- core
+  function ready() { return !!(ctx && master); }
+
+  var init = safe(function () {
+    if (!ctx) {
+      var AC = (typeof window !== 'undefined') && (window.AudioContext || window.webkitAudioContext);
+      if (AC) {
+        ctx = new AC();
+        master = ctx.createGain();
+        master.gain.value = muted ? 0 : MASTER_VOL;
+        var comp = ctx.createDynamicsCompressor();
+        master.connect(comp);
+        comp.connect(ctx.destination);
+        var len = Math.floor(ctx.sampleRate * 2);
+        noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+        var d = noiseBuf.getChannelData(0);
+        for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      }
+    }
+    if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume();
+    initSpeech();
+  });
+
+  // tone: oscillator with envelope. o: {type, vol, a, r, lp, to, dest}
+  function tone(freq, t, dur, o) {
+    o = o || {};
+    var osc = ctx.createOscillator();
+    var g = ctx.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(1, o.to), t + dur);
+    var vol = o.vol == null ? 0.3 : o.vol;
+    var a = o.a == null ? 0.005 : o.a;
+    var r = o.r == null ? 0.05 : o.r;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + a);
+    g.gain.setValueAtTime(vol, Math.max(t + a, t + dur - r));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    var node = osc;
+    if (o.lp) {
+      var f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(o.lp, t);
+      if (o.lpTo) f.frequency.exponentialRampToValueAtTime(o.lpTo, t + dur);
+      node.connect(f);
+      node = f;
+    }
+    node.connect(g);
+    g.connect(o.dest || master);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+
+  // noise burst through a filter. o: {type, freq, freqTo, q, vol, a, dest}
+  function noise(t, dur, o) {
+    o = o || {};
+    var src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    src.loop = true;
+    var f = ctx.createBiquadFilter();
+    f.type = o.type || 'bandpass';
+    f.frequency.setValueAtTime(o.freq || 1000, t);
+    if (o.freqTo) f.frequency.exponentialRampToValueAtTime(Math.max(20, o.freqTo), t + dur);
+    f.Q.value = o.q == null ? 1 : o.q;
+    var g = ctx.createGain();
+    var vol = o.vol == null ? 0.3 : o.vol;
+    var a = o.a == null ? 0.003 : o.a;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(o.dest || master);
+    src.start(t, Math.random());
+    src.stop(t + dur + 0.05);
+  }
+
+  function thump(t, f0, f1, dur, vol, dest) {
+    tone(f0, t, dur, { type: 'sine', vol: vol, a: 0.003, r: dur * 0.6, to: f1, dest: dest });
+  }
+
+  // ---------------------------------------------------------------- sounds
+  var NOTE = {
+    C3: 130.81, G3: 196.0, A3: 220.0, F3: 174.61,
+    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.0, A4: 440.0, B4: 493.88,
+    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.0
+  };
+
+  function brass(freq, t, dur, vol) {
+    // ノコギリ波2本(わずかにデチューン) + ローパス（アタックで開く）
+    tone(freq, t, dur, { type: 'sawtooth', vol: vol, a: 0.04, r: 0.12, lp: 900, lpTo: 2200 });
+    tone(freq * 1.006, t, dur, { type: 'sawtooth', vol: vol * 0.6, a: 0.05, r: 0.12, lp: 800, lpTo: 2000 });
+  }
+
+  function fanfare(t0) {
+    var b = 0.26; // 1拍
+    // [旋律, 開始拍, 長さ拍, 和音の根音(3度・5度を重ねる), 和音種別]
+    var seq = [
+      ['G4', 0,    0.5, 'C4', 'M'],
+      ['C5', 0.5,  0.5, 'C4', 'M'],
+      ['E5', 1,    0.5, 'C4', 'M'],
+      ['D5', 1.5,  0.5, 'G3', 'M'],
+      ['F5', 2,    0.5, 'F3', 'M'],
+      ['E5', 2.5,  0.5, 'C4', 'M'],
+      ['A4', 3,    0.5, 'F3', 'M'],
+      ['D5', 3.5,  0.5, 'G3', 'M'],
+      ['G5', 4,    1.0, 'C4', 'M'],
+      ['E5', 5,    0.5, 'A3', 'm'],
+      ['A5', 5.5,  0.5, 'F3', 'M'],
+      ['G5', 6,    1.0, 'G3', 'M'],
+      ['C5', 7.5,  0.5, 'C4', 'M'],
+      ['E5', 8,    0.5, 'C4', 'M'],
+      ['G5', 8.5,  4.0, 'C4', 'M']
+    ];
+    for (var i = 0; i < seq.length; i++) {
+      var s = seq[i];
+      var t = t0 + s[1] * b;
+      var d = s[2] * b + 0.04;
+      var last = i === seq.length - 1;
+      brass(NOTE[s[0]], t, last ? 1.5 : d, last ? 0.2 : 0.17);
+      var root = NOTE[s[3]];
+      var third = root * (s[4] === 'm' ? 1.189 : 1.26);
+      var fifth = root * 1.498;
+      var cv = last ? 0.12 : 0.08;
+      var cd = last ? 1.6 : d;
+      brass(root, t, cd, cv);
+      brass(third, t, cd, cv);
+      brass(fifth, t, cd, cv);
+    }
+    // 終止の和音の上に太鼓とシンバル風
+    var te = t0 + 8.5 * b;
+    thump(te, 110, 55, 0.4, 0.5);
+    noise(te, 1.2, { type: 'highpass', freq: 4500, q: 0.5, vol: 0.06 });
+    for (var k = 0; k < 4; k++) thump(t0 + (k * 2) * b, 100, 55, 0.2, 0.3);
+  }
+
+  function lamp(t) {
+    tone(880, t, 0.12, { type: 'square', vol: 0.15, a: 0.004, r: 0.04, lp: 2500 });
+  }
+
+  function lampFinal(t) {
+    // ドラムロール（徐々に加速・増大） → ジャン！
+    var dur = 1.6, n = 36, i, tt;
+    for (i = 0; i < n; i++) {
+      var p = i / n;
+      tt = t + dur * (1 - Math.pow(1 - p, 1.6));
+      noise(tt, 0.07, { type: 'bandpass', freq: 220 + 150 * p, q: 0.8, vol: 0.12 + 0.28 * p, a: 0.002 });
+      thump(tt, 160, 90, 0.07, 0.1 + 0.15 * p);
+    }
+    var te = t + dur + 0.05;
+    var chord = ['C4', 'G4', 'C5', 'E5'];
+    for (i = 0; i < chord.length; i++) brass(NOTE[chord[i]], te, 1.0, 0.16);
+    brass(NOTE.C3, te, 1.0, 0.18);
+    thump(te, 120, 50, 0.4, 0.55);
+    noise(te, 0.9, { type: 'highpass', freq: 4000, q: 0.5, vol: 0.08 });
+  }
+
+  function shutter(t) {
+    noise(t, 0.03, { type: 'bandpass', freq: 2500, q: 1.5, vol: 0.4, a: 0.001 });
+    tone(180, t, 0.04, { type: 'square', vol: 0.12, a: 0.001, r: 0.02, lp: 900 });
+    noise(t + 0.07, 0.05, { type: 'bandpass', freq: 1500, q: 1.5, vol: 0.35, a: 0.001 });
+    tone(130, t + 0.07, 0.06, { type: 'square', vol: 0.1, a: 0.001, r: 0.03, lp: 700 });
+  }
+
+  function cheer(t) {
+    // 観客のどよめき：帯域ノイズを揺らして膨らませる 約1.5秒
+    var dur = 1.5;
+    noise(t, dur, { type: 'bandpass', freq: 500, freqTo: 900, q: 0.7, vol: 0.45, a: 0.35 });
+    noise(t, dur, { type: 'bandpass', freq: 1100, freqTo: 700, q: 0.9, vol: 0.28, a: 0.4 });
+    noise(t + 0.2, dur - 0.2, { type: 'lowpass', freq: 400, q: 0.5, vol: 0.25, a: 0.4 });
+  }
+
+  var SOUNDS = {
+    tick: function (t) {
+      tone(660, t, 0.09, { type: 'triangle', vol: 0.3, a: 0.003, r: 0.05 });
+    },
+    go: function (t) {
+      tone(523.25, t, 0.45, { type: 'sawtooth', vol: 0.2, a: 0.01, r: 0.1, lp: 1800 });
+      tone(659.25, t, 0.45, { type: 'sawtooth', vol: 0.15, a: 0.01, r: 0.1, lp: 1800 });
+      tone(784.0, t, 0.45, { type: 'sawtooth', vol: 0.12, a: 0.01, r: 0.1, lp: 1800 });
+      thump(t, 140, 60, 0.25, 0.4);
+    },
+    boost: function (t) {
+      tone(300, t, 0.5, { type: 'sawtooth', vol: 0.15, a: 0.02, r: 0.15, to: 1100, lp: 1800 });
+      noise(t, 0.5, { type: 'bandpass', freq: 600, freqTo: 3000, q: 1, vol: 0.12, a: 0.05 });
+    },
+    stumble: function (t) {
+      thump(t, 220, 60, 0.18, 0.4);
+      tone(400, t + 0.12, 0.25, { type: 'triangle', vol: 0.2, to: 150, a: 0.01, r: 0.1 });
+      thump(t + 0.3, 120, 50, 0.15, 0.3);
+    },
+    reverse: function (t) {
+      tone(900, t, 0.5, { type: 'square', vol: 0.1, to: 200, a: 0.01, r: 0.15, lp: 1600 });
+      noise(t, 0.4, { type: 'bandpass', freq: 2500, freqTo: 400, q: 1, vol: 0.12, a: 0.02 });
+    },
+    swap: function (t) {
+      tone(500, t, 0.18, { type: 'triangle', vol: 0.2, to: 1000, a: 0.005, r: 0.05 });
+      tone(1000, t + 0.15, 0.2, { type: 'triangle', vol: 0.18, to: 500, a: 0.005, r: 0.06 });
+      noise(t, 0.3, { type: 'bandpass', freq: 3000, q: 2, vol: 0.12, a: 0.005 });
+    },
+    freeze: function (t) {
+      tone(600, t, 0.9, { type: 'sine', vol: 0.25, to: 70, a: 0.01, r: 0.4 });
+      noise(t, 0.8, { type: 'lowpass', freq: 2000, freqTo: 100, q: 0.7, vol: 0.18, a: 0.01 });
+    },
+    unfreeze: function (t) {
+      tone(220, t, 0.25, { type: 'triangle', vol: 0.25, to: 440, a: 0.005, r: 0.08 });
+      tone(440, t + 0.2, 0.2, { type: 'triangle', vol: 0.25, to: 880, a: 0.005, r: 0.08 });
+      tone(660, t + 0.35, 0.25, { type: 'triangle', vol: 0.22, a: 0.005, r: 0.1 });
+    },
+    lamp: lamp,
+    lampFinal: lampFinal,
+    shutter: shutter,
+    fanfare: fanfare,
+    cheer: cheer
+  };
+
+  var play = safe(function (name) {
+    if (muted || !ready()) return;
+    var fn = SOUNDS[name];
+    if (!fn) return;
+    if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+    fn(ctx.currentTime + 0.02);
+  });
+
+  // ---------------------------------------------------------------- loop
+  // 8ステップ(1小節)。足音: ドコドコ ドコドコ
+  var STEP_PATTERN = [1, 0.5, 0.8, 0.5, 1, 0.5, 0.8, 0.6]; // 足音の強さ
+  var BASS_PATTERN = ['C3', null, 'C3', null, 'G3', null, 'F3', null];
+
+  function scheduleStep(t, idx, rate) {
+    var s = idx % 8;
+    var v = STEP_PATTERN[s];
+    var pitch = rate * (1 + 0.12 * tension); // 0.6..1.1 程度
+    // ドコ（低い足音）
+    thump(t, (s % 2 === 0 ? 120 : 160) * pitch, 55 * pitch, 0.12, 0.35 * v, loopBus);
+    noise(t, 0.04, { type: 'bandpass', freq: 700 * pitch, q: 1, vol: 0.05 * v, a: 0.002, dest: loopBus });
+    // 控えめベース
+    var n = BASS_PATTERN[s];
+    if (n) {
+      tone(NOTE[n] * pitch, t, 0.28, { type: 'triangle', vol: 0.14, a: 0.01, r: 0.1, lp: 500, dest: loopBus });
+    }
+  }
+
+  function scheduleHeart(t, vol) {
+    // ドクン…ドクン
+    var v = vol == null ? 1 : vol;
+    thump(t, 70, 40, 0.18, 0.7 * v, heartBus || loopBus);
+    thump(t + 0.2, 60, 38, 0.2, 0.5 * v, heartBus || loopBus);
+  }
+
+  // 緊張度・スローに応じてバスの音量を合わせる（スロー中は心音だけ残す）
+  function applyMix() {
+    if (!ready()) return;
+    var t = ctx.currentTime;
+    try {
+      if (loopBus) loopBus.gain.setTargetAtTime(slow ? 0.06 : 0.8, t, slow ? 0.25 : 0.05);
+      if (ambBus) ambBus.gain.setTargetAtTime(slow ? 0.0 : tension, t, slow ? 0.2 : 0.15);
+      for (var i = 0; i < ambNodes.length; i++) {
+        var nd = ambNodes[i];
+        if (nd.baseFreq) nd.osc.frequency.setTargetAtTime(nd.baseFreq * (1 + 0.3 * tension), t, 0.3);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function loopTick() {
+    try {
+      if (!loopOn || !ready()) return;
+      var now = ctx.currentTime;
+      var rate = slow ? 0.65 : 1.0;
+      var stepDur = 0.17 / (rate * (1 + 0.6 * tension));
+      if (nextStepTime < now - 0.5) nextStepTime = now + 0.02;
+      while (nextStepTime < now + 0.12) {
+        scheduleStep(nextStepTime, stepIdx, rate);
+        stepIdx++;
+        nextStepTime += stepDur;
+      }
+      if (slow || tension > 0.06) {
+        var iv = slow ? (1.15 - 0.3 * tension) : (1.15 - 0.7 * tension);
+        var hv = slow ? 1.0 : (0.25 + 0.75 * tension);
+        if (nextBeatTime < now - 0.5) nextBeatTime = now + 0.02;
+        while (nextBeatTime < now + 0.12) {
+          scheduleHeart(nextBeatTime, hv);
+          nextBeatTime += iv;
+        }
+      } else {
+        nextBeatTime = now + 0.02;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function buildAmbience() {
+    // 低いドローン（ノコギリ波2本 + ローパス）と観客のざわめき（帯域ノイズ）
+    ambNodes = [];
+    var lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 320;
+    var dg = ctx.createGain(); dg.gain.value = 0.22;
+    lp.connect(dg); dg.connect(ambBus);
+    [[55, 'sawtooth'], [82.4, 'sawtooth'], [110.5, 'triangle']].forEach(function (p) {
+      var o = ctx.createOscillator();
+      o.type = p[1]; o.frequency.value = p[0];
+      o.connect(lp); o.start();
+      ambNodes.push({ osc: o, baseFreq: p[0] });
+    });
+    var src = ctx.createBufferSource();
+    src.buffer = noiseBuf; src.loop = true;
+    var bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 0.6;
+    var ng = ctx.createGain(); ng.gain.value = 0.28;
+    src.connect(bp); bp.connect(ng); ng.connect(ambBus);
+    src.start(0, Math.random());
+    ambNodes.push({ osc: src, baseFreq: 0 });
+  }
+
+  var startLoop = safe(function () {
+    if (!ready() || loopOn) return;
+    loopOn = true;
+    loopBus = ctx.createGain();
+    loopBus.gain.value = slow ? 0.06 : 0.8;
+    loopBus.connect(master);
+    ambBus = ctx.createGain();
+    ambBus.gain.value = slow ? 0 : tension;
+    ambBus.connect(master);
+    heartBus = ctx.createGain();
+    heartBus.gain.value = 1;
+    heartBus.connect(master);
+    buildAmbience();
+    stepIdx = 0;
+    nextStepTime = ctx.currentTime + 0.05;
+    nextBeatTime = ctx.currentTime + 0.05;
+    loopTick();
+    loopTimer = setInterval(loopTick, 40);
+  });
+
+  var stopLoop = safe(function () {
+    loopOn = false;
+    if (loopTimer !== null) { clearInterval(loopTimer); loopTimer = null; }
+    var buses = [loopBus, ambBus, heartBus].filter(Boolean);
+    var nodes = ambNodes;
+    loopBus = null; ambBus = null; heartBus = null; ambNodes = [];
+    buses.forEach(function (bus) {
+      try {
+        bus.gain.cancelScheduledValues(ctx.currentTime);
+        bus.gain.setValueAtTime(bus.gain.value, ctx.currentTime);
+        bus.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
+      } catch (e) { /* ignore */ }
+    });
+    setTimeout(function () {
+      buses.forEach(function (bus) { try { bus.disconnect(); } catch (e) { /* ignore */ } });
+      nodes.forEach(function (n) { try { n.osc.stop(); } catch (e) { /* ignore */ } });
+    }, 400);
+  });
+
+  var setSlow = safe(function (b) {
+    slow = !!b;
+    if (loopOn && ready()) {
+      nextBeatTime = ctx.currentTime + 0.05;
+      applyMix();
+    }
+  });
+
+  // 0..1: 終盤に向けて足音テンポ↑・ドローン↑・心音が速く大きく・どよめき↑
+  var setTension = safe(function (v) {
+    v = Number(v);
+    tension = isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
+    applyMix();
+  });
+
+  // ---------------------------------------------------------------- mute
+  var setMuted = safe(function (b) {
+    muted = !!b;
+    if (ready()) {
+      try {
+        master.gain.cancelScheduledValues(ctx.currentTime);
+        master.gain.setTargetAtTime(muted ? 0 : MASTER_VOL, ctx.currentTime, 0.01);
+      } catch (e) { /* ignore */ }
+    }
+    if (muted) cancelSpeech();
+  });
+
+  function isMuted() { return muted; }
+
+  // ---------------------------------------------------------------- speech
+  function synth() {
+    return (typeof window !== 'undefined' && window.speechSynthesis && typeof window.SpeechSynthesisUtterance !== 'undefined')
+      ? window.speechSynthesis : null;
+  }
+
+  function loadVoices() {
+    try {
+      var s = synth();
+      if (!s) return;
+      var all = s.getVoices() || [];
+      var list = [];
+      for (var i = 0; i < all.length; i++) {
+        var v = all[i];
+        var lang = String(v.lang || '').replace('_', '-').toLowerCase();
+        if (lang === 'ja-jp' && v.localService === true) list.push(v);
+      }
+      voices = list;
+      if (all.length) voicesLoaded = true;
+    } catch (e) { /* ignore */ }
+  }
+
+  function initSpeech() {
+    try {
+      var s = synth();
+      if (!s) return;
+      loadVoices();
+      if (!initSpeech.bound) {
+        initSpeech.bound = true;
+        if (s.addEventListener) s.addEventListener('voiceschanged', loadVoices);
+        else s.onvoiceschanged = loadVoices;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function cb(f, a) { if (typeof f === 'function') { try { f(a); } catch (e) { /* ignore */ } } }
+
+  // speak(text, role, opts)  opts = {priority:'high'|'normal', onstart(real), onend(), ondrop(), fallbackMs, maxWaitMs}
+  //  - 実発話: onstart は発話が実際に始まった瞬間、onend は読み終わり。
+  //    high は発話中の音声を cancel して即発話、normal は発話中なら捨てる（ondrop）。
+  //    maxWaitMs（既定1200）以内に始まらなければ古い文として捨てる（ondrop）。
+  //  - 音声なし/ミュート/読み上げOFF: onstart(false) を即時、onend を fallbackMs（既定2200）後に呼ぶ。
+  //  戻り値: 'speech' | 'timer' | 'dropped'
+  var speak = safe(function (text, role, opts) {
+    opts = opts || {};
+    if (!text) return 'dropped';
+    var high = opts.priority === 'high';
+    var fb = opts.fallbackMs > 0 ? opts.fallbackMs : 2200;
+    var s = synth();
+    if (s && !voices.length) loadVoices();
+    var real = !!(s && voices.length && !muted && speechOn);
+    if (!real) {
+      cb(opts.onstart, false);
+      setTimeout(function () { cb(opts.onend); }, fb);
+      return 'timer';
+    }
+    if (speaking && !high) { cb(opts.ondrop); return 'dropped'; }
+    if (speaking && curFinish) curFinish('preempt');
+
+    var isAna = role === 'ana';
+    var voice = (isAna || voices.length < 2) ? voices[0] : voices[1];
+    var u = new window.SpeechSynthesisUtterance(String(text));
+    u.voice = voice;
+    u.lang = 'ja-JP';
+    u.pitch = isAna ? 1.3 : 0.8;
+    u.rate = isAna ? 1.45 : 1.25;
+    u.volume = 1;
+
+    var tok = ++speakSeq;
+    var started = false, ended = false, waitTimer = null, dogTimer = null;
+    function finish(why) {
+      if (ended) return;
+      ended = true;
+      if (waitTimer) clearTimeout(waitTimer);
+      if (dogTimer) clearTimeout(dogTimer);
+      if (tok === speakSeq) { speaking = false; curFinish = null; }
+      if (started) cb(opts.onend);
+      else cb(opts.ondrop);
+    }
+    u.onstart = function () {
+      if (ended || started) return;
+      started = true;
+      if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
+      dogTimer = setTimeout(function () { finish('watchdog'); }, 9000);
+      cb(opts.onstart, true);
+    };
+    u.onend = function () { finish('end'); };
+    u.onerror = function () { finish('error'); };
+    var maxWait = opts.maxWaitMs === undefined ? 1200 : opts.maxWaitMs;
+    if (maxWait > 0) {
+      waitTimer = setTimeout(function () {
+        if (started || ended) return;
+        try { s.cancel(); } catch (e) { /* ignore */ }
+        finish('stale');
+      }, maxWait);
+    }
+    speaking = true;
+    curFinish = finish;
+    if (high) { try { s.cancel(); } catch (e) { /* ignore */ } }
+    s.speak(u);
+    return 'speech';
+  });
+
+  var cancelSpeech = safe(function () {
+    var s = synth();
+    if (s) s.cancel();
+    if (curFinish) curFinish('cancel');
+    speaking = false;
+  });
+
+  var setSpeech = safe(function (b) {
+    speechOn = !!b;
+    if (!speechOn) cancelSpeech();
+  });
+
+  function isSpeechOn() { return speechOn; }
+
+  var speechAvailable = safe(function () {
+    if (!synth()) return false;
+    if (!voices.length) loadVoices();
+    return voices.length > 0;
+  });
+
+  return {
+    init: init,
+    setMuted: setMuted,
+    isMuted: isMuted,
+    play: play,
+    startLoop: startLoop,
+    stopLoop: stopLoop,
+    setSlow: setSlow,
+    setTension: setTension,
+    speak: speak,
+    setSpeech: setSpeech,
+    isSpeechOn: isSpeechOn,
+    speechAvailable: function () { return !!speechAvailable(); },
+    cancelSpeech: cancelSpeech
+  };
+})();
+
+</script>
+<script>
+/* render.js */
+var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
+
+RR.Renderer = (function () {
+  'use strict';
+
+  var EMOJI_FONT = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
+  var TEXT_FONT = '"Yu Gothic UI","Meiryo","Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif';
+
+  // 高コントラスト12色（白文字が乗る濃さ）
+  var LANE_COLORS = [
+    '#d32f2f', '#1565c0', '#2e7d32', '#ef6c00', '#7b1fa2', '#00838f',
+    '#c2185b', '#5d4037', '#283593', '#8a7a00', '#37474f', '#ad4a00'
+  ];
+
+  // 乗り物ごとの向き補正。flip:true=左右反転して右向きにする / rot:ラジアン回転
+  // 不明な id は反転（Windows の絵文字は左向きが多い）
+  var VEHICLE_FIX = {
+    horse: { flip: true },
+    snail: { flip: true },
+    turtle: { flip: true },
+    duck: { flip: true },
+    cart: { flip: true },
+    chair: { flip: true },
+    pig: { flip: true },
+    rocket: { flip: false, rot: Math.PI / 4 }
+  };
+
+  // 天気ごとの配色
+  var WEATHER_STYLE = {
+    sunny:  { skyA: '#8fd3ff', skyB: '#dff3ff', mix: '#ffffff', amt: 0.82, ink: '#12202e', line: 'rgba(0,0,0,0.25)' },
+    rain:   { skyA: '#5b6f86', skyB: '#8da0b4', mix: '#b9c7d6', amt: 0.78, ink: '#10202e', line: 'rgba(0,0,0,0.3)' },
+    fog:    { skyA: '#aeb6bd', skyB: '#d6dadd', mix: '#e8eaec', amt: 0.84, ink: '#1c262e', line: 'rgba(0,0,0,0.25)' },
+    snow:   { skyA: '#9fb7d6', skyB: '#e8f0fb', mix: '#f4f8ff', amt: 0.86, ink: '#12202e', line: 'rgba(30,60,100,0.35)' },
+    sunset: { skyA: '#ff7a45', skyB: '#ffd08a', mix: '#ffd6a8', amt: 0.72, ink: '#2e1408', line: 'rgba(80,20,0,0.35)' },
+    night:  { skyA: '#050a22', skyB: '#1a2350', mix: '#0a1030', amt: 0.78, ink: '#f2f5ff', line: 'rgba(255,255,255,0.3)' },
+    wind:   { skyA: '#7fcfc0', skyB: '#e3f6ee', mix: '#eefaf3', amt: 0.82, ink: '#10261f', line: 'rgba(0,0,0,0.25)' },
+    cloudy: { skyA: '#8995a3', skyB: '#c3cad2', mix: '#dde1e6', amt: 0.82, ink: '#16202a', line: 'rgba(0,0,0,0.28)' },
+    thunder:{ skyA: '#2f3447', skyB: '#59607a', mix: '#9aa0b6', amt: 0.72, ink: '#101420', line: 'rgba(0,0,0,0.35)' },
+    storm:  { skyA: '#2f3447', skyB: '#59607a', mix: '#9aa0b6', amt: 0.72, ink: '#101420', line: 'rgba(0,0,0,0.35)' },
+    rainbow:{ skyA: '#8fd3ff', skyB: '#fff1f8', mix: '#ffffff', amt: 0.82, ink: '#12202e', line: 'rgba(0,0,0,0.25)' }
+  };
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function ease(k) { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); }
+  function frac(x) { return x - Math.floor(x); }
+  function hash(k, s) { return frac(Math.sin(k * 127.1 + (s || 0) * 311.7) * 43758.5453); }
+
+  // ---------- 個性（looks）の素材 ----------
+  // 頭の飾り。'horn' と 'prop' は図形で描く
+  var HATS = ['👑', '🎩', '🧢', '🎀', '🌸', '⛑️', '🎓', '🪖', '👒', '🍄', '🍓', '🌻', 'horn', 'prop'];
+  // 顔セット（状況 → 絵文字）
+  var FACE_SETS = {
+    human: { lead: '😎', up: '😆', mid: '🙂', nerv: '😬', back: '😰', stumble: '😵', boost: '😤', reverse: '🙃', swap: '😲', win: '🥳', podium: '😄', other: '😌' },
+    cat:   { lead: '😼', up: '😸', mid: '😺', nerv: '🙀', back: '😿', stumble: '🙀', boost: '😾', reverse: '🙃', swap: '🙀', win: '😻', podium: '😸', other: '😽' }
+  };
+  // 走り方（大きくゆっくり）
+  var GAITS = [
+    { id: 'hop',   label: 'ぴょんぴょん型' },
+    { id: 'sway',  label: 'ゆらゆら型' },
+    { id: 'tiny',  label: 'ちょこまか型' },
+    { id: 'flip',  label: 'くるりん型' },
+    { id: 'wave',  label: 'うねうね型' },
+    { id: 'lean',  label: '前のめり型' },
+    { id: 'float', label: 'ふわふわ型' }
+  ];
+  // 軌跡（名札の後ろに流れる。drawn=図形）
+  var TRAILS = [
+    { id: 'dust', ch: '💨' }, { id: 'note', ch: '🎵' }, { id: 'star', ch: '⭐' },
+    { id: 'heart', ch: '💗' }, { id: 'bubble', ch: null }, { id: 'leaf', ch: '🍃' }, { id: 'spark', ch: '✨' }
+  ];
+
+  function shuffled(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // レース内で被らないよう、素材を巡回させて割り当てる（順位とは無関係：毎回乱数）
+  function makeLooks(n) {
+    var hats = shuffled(HATS);
+    var gaits = shuffled(GAITS);
+    var trails = shuffled(TRAILS);
+    var sizes = shuffled([0.85, 0.89, 0.93, 0.96, 1.0, 1.03, 1.06, 1.09, 1.12, 1.15, 0.87, 0.98]);
+    var hueSlots = shuffled([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var hue = Math.round(hueSlots[i % 12] * 30 + Math.random() * 14 - 7);
+      var gait = gaits[i % gaits.length];
+      var fset = Math.random() < 0.6 ? 'human' : 'cat';
+      var faces = FACE_SETS[fset];
+      out.push({
+        hue: ((hue % 360) + 360) % 360,
+        sat: +(1.1 + Math.random() * 0.5).toFixed(2),
+        face: faces.mid,
+        faces: faces,
+        faceSet: fset,
+        hat: hats[i % hats.length],
+        gait: gait.id,
+        trail: trails[i % trails.length].id,
+        trailCh: trails[i % trails.length].ch,
+        size: sizes[i % sizes.length],
+        label: gait.label,
+        phase: Math.random() * 6.283,
+        tint: 'hsl(' + (((hue % 360) + 360) % 360) + ',85%,52%)'
+      });
+    }
+    return out;
+  }
+
+  // 走り方 → { dy(負=上), rot, sx, sy }。lh=レーン高さ、mv=動いている度合い 0..1
+  function gaitPose(kind, t, ph, lh, mv) {
+    var s, a;
+    var P = { dy: 0, rot: 0, sx: 1, sy: 1 };
+    if (kind === 'hop') {
+      s = Math.abs(Math.sin(t * 0.0072 + ph));
+      P.dy = -s * lh * 0.17 * mv;
+      P.sy = 1 - 0.12 * Math.pow(1 - s, 6) * mv;
+      P.sx = 1 + 0.08 * Math.pow(1 - s, 6) * mv;
+      P.rot = 0.06 * Math.sin(t * 0.0072 + ph) * mv;
+    } else if (kind === 'sway') {
+      a = Math.sin(t * 0.0048 + ph);
+      P.rot = 0.24 * a * mv;
+      P.dy = -Math.abs(a) * lh * 0.04 * mv;
+    } else if (kind === 'tiny') {
+      s = Math.sin(t * 0.028 + ph);
+      P.dy = -s * s * lh * 0.045 * mv;
+      P.rot = 0.04 * Math.sin(t * 0.037 + ph) * mv;
+    } else if (kind === 'flip') {
+      var per = 3400;
+      var k = (((t + ph * 420) % per) + per) % per / per;
+      var jump = 0.26;
+      if (k < jump && mv > 0.5) {
+        var u = k / jump;
+        P.dy = -Math.sin(u * Math.PI) * lh * 0.3;
+        P.rot = -ease(u) * 6.283;
+      } else {
+        s = Math.abs(Math.sin(t * 0.0068 + ph));
+        P.dy = -s * lh * 0.07 * mv;
+      }
+    } else if (kind === 'wave') {
+      a = Math.sin(t * 0.0042 + ph);
+      P.dy = a * lh * 0.07 * mv;
+      P.sx = 1 + 0.1 * Math.sin(t * 0.0084 + ph) * mv;
+      P.sy = 1 - 0.1 * Math.sin(t * 0.0084 + ph) * mv;
+      P.rot = 0.08 * Math.cos(t * 0.0042 + ph) * mv;
+    } else if (kind === 'lean') {
+      s = Math.abs(Math.sin(t * 0.0115 + ph));
+      P.rot = (0.2 + 0.03 * Math.sin(t * 0.0115 + ph)) * mv;
+      P.dy = -s * lh * 0.05 * mv;
+      P.sx = 1 + 0.07 * mv;
+      P.sy = 1 - 0.04 * mv;
+    } else { // float
+      a = Math.sin(t * 0.0029 + ph);
+      P.dy = (-lh * 0.07 - a * lh * 0.09) * mv;
+      P.rot = 0.09 * Math.sin(t * 0.0029 + ph + 1.2) * mv;
+    }
+    return P;
+  }
+
+  function hex2rgb(h) {
+    return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)];
+  }
+  function mix(h1, h2, k) {
+    var a = hex2rgb(h1), b = hex2rgb(h2);
+    return 'rgb(' + Math.round(lerp(a[0], b[0], k)) + ',' + Math.round(lerp(a[1], b[1], k)) + ',' + Math.round(lerp(a[2], b[2], k)) + ')';
+  }
+
+  function rrect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+
+  // 縁取り付き文字
+  function outlined(ctx, text, x, y, fs, fill, stroke, lw) {
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = lw || Math.max(3, fs * 0.2);
+    ctx.strokeStyle = stroke || '#101018';
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = fill || '#fff';
+    ctx.fillText(text, x, y);
+  }
+
+  function create(canvas) {
+    var ctx = canvas.getContext('2d');
+    var plan = null;
+    var W = 960, H = 540, dpr = 1;
+    var L = null; // レイアウト
+    var plates = []; // 名前札の測定結果
+    var looks = [];
+    var sprites = [];  // 走者ごとの色味付き乗り物スプライト
+    var faceMem = [];  // 表情の変化検出（ポップ演出用）
+    var hb = { ph: 0, last: null };
+    var plateQueue = [];
+    var pc = 0;        // 1フレームで描いた粒子数（上限 60 の検証用）
+    var api = null;
+
+    function resize() {
+      var par = canvas.parentElement;
+      var w = par ? par.clientWidth : 0;
+      var h = par ? par.clientHeight : 0;
+      if (!w || !h) { w = canvas.clientWidth || canvas.width || 960; h = canvas.clientHeight || canvas.height || 540; }
+      dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+      W = w; H = h;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      canvas.width = Math.max(1, Math.round(w * dpr));
+      canvas.height = Math.max(1, Math.round(h * dpr));
+      layout();
+    }
+
+    function setPlan(p) {
+      plan = p;
+      looks = makeLooks((p && (p.n || (p.names && p.names.length))) || 0);
+      faceMem = [];
+      hb = { ph: 0, last: null };
+      if (api) api.looks = looks;
+      layout();
+    }
+
+    function buildSprites() {
+      sprites = [];
+      if (!plan || !L || !plan.vehicle || typeof document === 'undefined') return;
+      var font = Math.min(L.emoji * 1.15 * 2.2 * dpr, 300);
+      var side = Math.ceil(font * 1.5);
+      for (var i = 0; i < L.n; i++) {
+        var c = document.createElement('canvas');
+        c.width = c.height = side;
+        var x = c.getContext('2d');
+        var lk = looks[i];
+        try { if ('filter' in x) x.filter = 'hue-rotate(' + lk.hue + 'deg) saturate(' + lk.sat + ')'; } catch (e) { /* 無視 */ }
+        x.font = Math.round(font) + 'px ' + EMOJI_FONT;
+        x.textAlign = 'center';
+        x.textBaseline = 'middle';
+        x.fillStyle = '#000';
+        x.fillText(plan.vehicle.emoji, side / 2, side / 2 + font * 0.04);
+        sprites.push({ c: c, font: font });
+      }
+    }
+
+    function layout() {
+      if (!plan) { L = null; return; }
+      var n = plan.n || plan.names.length;
+      var top = Math.round(H * 0.08);
+      var bot = Math.round(H * 0.10);
+      var laneH = (H - top - bot) / n;
+      var emoji = laneH * 1.0;
+      var fs = Math.min(laneH * 0.5, 46);
+      var minFs = Math.min(n <= 8 ? 40 : 30, fs);
+      var capW = Math.min(W * 0.2, 380);
+      plates = [];
+      var maxPlate = 0;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      for (var i = 0; i < n; i++) {
+        var name = String(plan.names[i]);
+        var f = fs;
+        var tw;
+        var padX = 0;
+        for (;;) {
+          ctx.font = '900 ' + f + 'px ' + TEXT_FONT;
+          padX = f * 0.45;
+          tw = ctx.measureText(name).width;
+          if (tw + padX * 2 <= capW || f <= minFs) break;
+          f = Math.max(minFs, f - 2);
+        }
+        var shown = name;
+        while (tw + padX * 2 > capW && shown.length > 1) {
+          shown = shown.slice(0, -1);
+          tw = ctx.measureText(shown + '…').width;
+        }
+        if (shown !== name) shown += '…';
+        plates.push({ text: shown, fs: f, w: tw + padX * 2 });
+        if (tw + padX * 2 > maxPlate) maxPlate = tw + padX * 2;
+      }
+      ctx.restore();
+      var labelW = Math.max(laneH * 0.95, 44);
+      var x0 = labelW + 10 + maxPlate + 6 + emoji * 0.12;
+      var cs = Math.max(10, laneH / 3);
+      var rightMargin = cs * 2 + Math.max(laneH * 1.0, 56) + 8;
+      var x1 = W - rightMargin;
+      L = { cs: cs, n: n, top: top, bot: bot, laneH: laneH, emoji: emoji, fs: fs, labelW: labelW, x0: x0, x1: x1 };
+      buildSprites();
+    }
+
+    function laneRect(i) {
+      if (!L) return { x: 0, y: 0, w: W, h: H };
+      return { x: 0, y: L.top + i * L.laneH, w: W, h: L.laneH };
+    }
+
+    function weatherId() {
+      var id = plan && plan.weather && plan.weather.id;
+      return WEATHER_STYLE[id] ? id : 'sunny';
+    }
+
+    function vfix() {
+      var id = plan && plan.vehicle && plan.vehicle.id;
+      var f = VEHICLE_FIX[id];
+      if (!f) f = { flip: true };
+      return f;
+    }
+
+    // ---------- 背景(空) ----------
+    function drawSky(wid, t) {
+      var st = WEATHER_STYLE[wid];
+      var g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, st.skyA);
+      g.addColorStop(1, st.skyB);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      var r = Math.max(26, L.top * 0.45);
+      if (wid === 'sunny' || wid === 'rainbow' || wid === 'wind') {
+        drawSun(W * 0.76, L.top * 0.5, r, t, '#ffd93b');
+      } else if (wid === 'sunset') {
+        drawSun(W * 0.82, L.top + L.laneH * 0.4, r * 1.9, t, '#ff5a2a');
+      } else if (wid === 'night') {
+        for (var k = 0; k < 14; k++) {
+          var sx = hash(k, 1) * W, sy = hash(k, 2) * H;
+          var tw = 0.5 + 0.5 * Math.sin(t * 0.002 + k * 3.1);
+          ctx.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.55 * tw).toFixed(2) + ')';
+          ctx.beginPath(); ctx.arc(sx, sy, 2 + hash(k, 3) * 2.5, 0, 6.283); ctx.fill();
+        }
+        // 月
+        var mx = W * 0.76, my = L.top * 0.5;
+        ctx.fillStyle = '#fff6c8';
+        ctx.beginPath(); ctx.arc(mx, my, r, 0, 6.283); ctx.fill();
+        ctx.fillStyle = '#0d1536';
+        ctx.beginPath(); ctx.arc(mx + r * 0.45, my - r * 0.2, r * 0.9, 0, 6.283); ctx.fill();
+      } else if (wid === 'cloudy' || wid === 'rain' || wid === 'thunder' || wid === 'storm' || wid === 'snow') {
+        var dark = (wid === 'thunder' || wid === 'storm') ? 'rgba(30,34,50,0.85)' : (wid === 'rain' ? 'rgba(80,92,110,0.85)' : 'rgba(255,255,255,0.9)');
+        for (var c = 0; c < 4; c++) {
+          var cx = ((hash(c, 5) * W + t * 0.012 * (1 + c * 0.3)) % (W + 400)) - 200;
+          cloud(cx, L.top * (0.3 + 0.2 * hash(c, 6)), L.top * (0.9 + 0.5 * hash(c, 7)), dark);
+        }
+      }
+      if (wid === 'rainbow') {
+        var bx = W * 0.5, by = H * 0.9, br = H * 0.78;
+        var cols = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
+        ctx.lineWidth = 12;
+        for (var q = 0; q < cols.length; q++) {
+          ctx.strokeStyle = cols[q];
+          ctx.globalAlpha = 0.55;
+          ctx.beginPath(); ctx.arc(bx, by, br - q * 12, Math.PI, 0); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function cloud(x, y, s, col) {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(x, y, s * 0.35, 0, 6.283);
+      ctx.arc(x + s * 0.35, y - s * 0.12, s * 0.42, 0, 6.283);
+      ctx.arc(x + s * 0.75, y, s * 0.32, 0, 6.283);
+      ctx.rect(x, y, s * 0.75, s * 0.32);
+      ctx.fill();
+    }
+
+    function drawSun(x, y, r, t, col) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(t * 0.0003);
+      ctx.strokeStyle = col;
+      ctx.lineWidth = Math.max(4, r * 0.18);
+      ctx.lineCap = 'round';
+      for (var k = 0; k < 12; k++) {
+        var a = k / 12 * 6.283;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 1.3, Math.sin(a) * r * 1.3);
+        ctx.lineTo(Math.cos(a) * r * 1.75, Math.sin(a) * r * 1.75);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.45, 0, 6.283); ctx.fill();
+    }
+
+    // ---------- コース ----------
+    function drawTrack(wid, t) {
+      var st = WEATHER_STYLE[wid];
+      var n = L.n, lh = L.laneH, x0 = L.x0, x1 = L.x1;
+      var i, y;
+      for (i = 0; i < n; i++) {
+        y = L.top + i * lh;
+        var col = LANE_COLORS[i % LANE_COLORS.length];
+        ctx.fillStyle = mix(col, st.mix, st.amt + (i % 2 ? 0.04 : -0.02));
+        ctx.fillRect(0, y, W, lh);
+      }
+      // レーン境界線
+      ctx.strokeStyle = st.line;
+      ctx.lineWidth = 2;
+      for (i = 0; i <= n; i++) {
+        y = L.top + i * lh;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      // 距離マーカー
+      var marks = [0.25, 0.5, 0.75];
+      var mfs = Math.max(20, Math.min(30, L.top * 0.34));
+      ctx.font = '800 ' + mfs + 'px ' + TEXT_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (var m = 0; m < marks.length; m++) {
+        var mx = x0 + L.emoji * 0.5 + marks[m] * (x1 - x0 - L.emoji) ;
+        ctx.setLineDash([10, 10]);
+        ctx.strokeStyle = st.line;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(mx, L.top); ctx.lineTo(mx, H - L.bot); ctx.stroke();
+        ctx.setLineDash([]);
+        var label = Math.round(marks[m] * 100) + '%';
+        ctx.fillStyle = st.ink;
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(label, mx, L.top - mfs * 0.7);
+        ctx.globalAlpha = 1;
+      }
+      // スタートゲート
+      var gy0 = L.top, gy1 = L.top + n * lh;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x0 - 5, gy0, 10, gy1 - gy0);
+      ctx.fillStyle = '#d32f2f';
+      for (i = 0; i < n * 2; i++) {
+        if (i % 2 === 0) ctx.fillRect(x0 - 5, gy0 + i * lh / 2, 10, lh / 2);
+      }
+      ctx.fillStyle = st.ink;
+      ctx.font = '900 ' + mfs + 'px ' + TEXT_FONT;
+      ctx.fillText('START', x0, L.top - mfs * 0.7);
+      // ゴールのチェッカー
+      var cs = L.cs;
+      var cols = 1;
+      var gx = x1 + 2;
+      var rows = Math.ceil((gy1 - gy0) / cs);
+      for (var rr = 0; rr < rows; rr++) {
+        for (var cc = 0; cc < cols * 2; cc++) {
+          ctx.fillStyle = ((rr + cc) % 2 === 0) ? '#111' : '#fff';
+          var ch = Math.min(cs, gy1 - (gy0 + rr * cs));
+          ctx.fillRect(gx + cc * cs / 1, gy0 + rr * cs, cs, ch);
+        }
+      }
+      ctx.fillStyle = st.ink;
+      ctx.font = '900 ' + mfs + 'px ' + TEXT_FONT;
+      ctx.textAlign = 'right';
+      ctx.fillText('GOAL', W - 6, L.top - mfs * 0.7);
+      ctx.textAlign = 'center';
+
+      // レーン番号
+      for (i = 0; i < n; i++) {
+        y = L.top + i * lh;
+        var c2 = LANE_COLORS[i % LANE_COLORS.length];
+        ctx.fillStyle = c2;
+        ctx.fillRect(0, y + 2, L.labelW, lh - 4);
+        var nf = Math.min(lh * 0.72, 56);
+        ctx.font = '900 ' + nf + 'px ' + TEXT_FONT;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        outlined(ctx, String(i + 1), L.labelW / 2, y + lh / 2 + nf * 0.04, nf, '#fff', 'rgba(0,0,0,0.55)', Math.max(3, nf * 0.14));
+      }
+      ctx.textAlign = 'left';
+    }
+
+    // ---------- 走者 ----------
+    function activeEvents(i, t) {
+      var res = { stumble: null, boost: null, reverse: null, swap: null };
+      var ev = plan.events || [];
+      for (var k = 0; k < ev.length; k++) {
+        var e = ev[k];
+        if (e.type === 'swap') {
+          if ((e.runner === i || e.runner2 === i) && t >= e.t - 100 && t <= e.t + 1600) res.swap = e;
+        } else if (e.runner === i && t >= e.t && t <= e.t + (e.dur || 1000)) {
+          res[e.type] = e;
+        }
+      }
+      return res;
+    }
+
+    // いまの順位（先頭=0）。plan.positionAt があれば使い、無ければ progress から計算
+    function ranksAt(t) {
+      var n = L.n, i, j, out = [];
+      if (typeof plan.positionAt === 'function') {
+        try {
+          var a = plan.positionAt(t);
+          if (a && a.length >= n) return a;
+        } catch (e) { /* fallthrough */ }
+      }
+      var ps = [];
+      for (i = 0; i < n; i++) ps.push(plan.progress(i, t));
+      for (i = 0; i < n; i++) {
+        var r = 0;
+        for (j = 0; j < n; j++) if (ps[j] > ps[i] || (ps[j] === ps[i] && j < i)) r++;
+        out.push(r);
+      }
+      return out;
+    }
+
+    // 状況 → 表情の種類
+    function faceKind(i, t, ev, rk, tension) {
+      var n = L.n;
+      var ft = plan.finishTime[i];
+      if (t >= ft) {
+        var rank = plan.rankOf[i];
+        return rank === 0 ? 'win' : (rank <= 2 ? 'podium' : 'other');
+      }
+      if (ev.stumble) return 'stumble';
+      if (ev.swap) return 'swap';
+      if (ev.reverse) return 'reverse';
+      if (ev.boost) return 'boost';
+      if (t <= 0) return 'mid';
+      if (rk === 0) return 'lead';
+      if (rk <= Math.max(1, Math.round(n * 0.3) - 1)) return 'up';
+      if (n >= 3 && rk >= Math.ceil(n * 0.7)) return 'back';
+      return tension > 0.6 ? 'nerv' : 'mid';
+    }
+
+    function drawStar(x, y, r, rot) {
+      ctx.beginPath();
+      for (var k = 0; k < 10; k++) {
+        var rr = k % 2 ? r * 0.45 : r;
+        var a = rot + k * Math.PI / 5 - Math.PI / 2;
+        if (k === 0) ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+        else ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 頭の飾り（原点=頭のてっぺん、上向きに描く）
+    function drawHat(look, hs, t) {
+      if (look.hat === 'horn') {
+        var g = ctx.createLinearGradient(0, 0, 0, -hs * 1.1);
+        g.addColorStop(0, '#fff6c8'); g.addColorStop(1, '#ffb300');
+        ctx.fillStyle = g;
+        ctx.strokeStyle = '#7a4a00';
+        ctx.lineWidth = Math.max(2, hs * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(-hs * 0.28, 0); ctx.lineTo(hs * 0.28, 0); ctx.lineTo(0, -hs * 1.1);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-hs * 0.2, -hs * 0.35); ctx.lineTo(hs * 0.2, -hs * 0.45);
+        ctx.moveTo(-hs * 0.13, -hs * 0.68); ctx.lineTo(hs * 0.13, -hs * 0.74);
+        ctx.stroke();
+      } else if (look.hat === 'prop') {
+        ctx.strokeStyle = '#37474f';
+        ctx.lineWidth = Math.max(2, hs * 0.1);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -hs * 0.4); ctx.stroke();
+        ctx.save();
+        ctx.translate(0, -hs * 0.42);
+        ctx.scale(Math.cos(t * 0.012 + look.phase), 1);
+        ctx.fillStyle = look.tint;
+        ctx.strokeStyle = '#102030';
+        ctx.lineWidth = Math.max(2, hs * 0.06);
+        ctx.beginPath(); ctx.ellipse(-hs * 0.4, 0, hs * 0.42, hs * 0.12, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(hs * 0.4, 0, hs * 0.42, hs * 0.12, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.font = Math.round(hs * 1.05) + 'px ' + EMOJI_FONT;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000';
+        ctx.fillText(look.hat, 0, -hs * 0.42);
+      }
+    }
+
+    // 名札の後ろに流れる軌跡（少数・大きめ）。名札より後ろに描く
+    function drawTrail(i, t, px, yc, size, look) {
+      var cnt = L.n <= 8 ? 3 : 2;
+      var lh = L.laneH;
+      for (var j = 0; j < cnt; j++) {
+        var ph = frac(t / 1700 + j / cnt + look.phase / 6.283);
+        var x = px + size * 0.1 - ph * size * 3.4;
+        if (x < L.labelW + size * 0.4) continue;
+        var y = yc + Math.sin(ph * 9 + j * 2 + i) * lh * 0.16 - ph * lh * 0.12;
+        var a = Math.sin(ph * Math.PI);
+        if (a < 0.05) continue;
+        var s = size * (0.5 + 0.22 * hash(i * 7 + j, 4)) * (1 - 0.25 * ph);
+        ctx.globalAlpha = Math.min(1, a * 1.3);
+        pc++;
+        if (look.trailCh) {
+          ctx.save();
+          ctx.translate(x, y);
+          if (look.trail === 'star' || look.trail === 'spark' || look.trail === 'leaf') ctx.rotate(ph * 4 + j);
+          ctx.font = Math.round(s) + 'px ' + EMOJI_FONT;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#000';
+          ctx.fillText(look.trailCh, 0, 0);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = 'rgba(255,255,255,0.55)';
+          ctx.strokeStyle = look.tint;
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(x, y, s * 0.36, 0, 6.283); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.beginPath(); ctx.arc(x - s * 0.12, y - s * 0.12, s * 0.09, 0, 6.283); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawRunner(i, t, rk, tension) {
+      var lh = L.laneH;
+      var yc = L.top + i * lh + lh / 2;
+      var p = clamp(plan.progress(i, t), 0, 1);
+      var look = looks[i];
+      var base = L.emoji;
+      var size = base * (0.96 + (look.size - 1) * 0.6);
+      var plateQ = plateQueue;
+      var cx = L.x0 + base / 2 + p * (L.x1 - L.x0 - base);
+      var ev = activeEvents(i, t);
+      var finished = t >= plan.finishTime[i];
+      var started = p > 0;
+      var running = started && !finished && !ev.stumble;
+      var rank = plan.rankOf[i];
+      var color = LANE_COLORS[i % LANE_COLORS.length];
+      var fix = vfix();
+      var py = plates[i];
+      var sinceFin = t - plan.finishTime[i];
+
+      // 光の尾 / グロー(boost)
+      if (ev.boost) {
+        var k = (t - ev.boost.t) / (ev.boost.dur || 1200);
+        var a = Math.sin(clamp(k, 0, 1) * Math.PI);
+        var tl = size * 3.6;
+        var g = ctx.createLinearGradient(cx - tl, 0, cx, 0);
+        g.addColorStop(0, 'rgba(255,240,120,0)');
+        g.addColorStop(1, 'rgba(255,250,200,' + (0.9 * a).toFixed(2) + ')');
+        ctx.fillStyle = g;
+        for (var s = 0; s < 3; s++) {
+          var yy = yc + (s - 1) * size * 0.2;
+          ctx.fillRect(cx - tl * (1 - s * 0.18), yy - size * 0.05, tl * (1 - s * 0.18), size * 0.1);
+        }
+        var rg = ctx.createRadialGradient(cx, yc, size * 0.1, cx, yc, size * 1.1);
+        rg.addColorStop(0, 'rgba(255,255,160,' + (0.95 * a).toFixed(2) + ')');
+        rg.addColorStop(1, 'rgba(255,220,0,0)');
+        ctx.fillStyle = rg;
+        ctx.beginPath(); ctx.arc(cx, yc, size * 1.1, 0, 6.283); ctx.fill();
+      }
+
+      // 姿勢（走り方）。ゴール後は喜ぶ/がっかりポーズ
+      var pose;
+      if (finished) {
+        var fadeIn = ease(sinceFin / 300);
+        if (rank === 0) {
+          pose = gaitPose('hop', t, look.phase, lh * 1.5, 1);
+          pose.dy *= fadeIn; pose.rot = 0.12 * Math.sin(t * 0.0144) * fadeIn;
+        } else if (rank <= 2) {
+          pose = gaitPose('hop', t, look.phase, lh * 0.9, 1);
+          pose.dy *= fadeIn; pose.rot = 0;
+        } else {
+          pose = { dy: size * 0.05 * fadeIn, rot: 0.14 * fadeIn, sx: 1, sy: 1 - 0.04 * fadeIn };
+        }
+      } else {
+        pose = gaitPose(look.gait, t, look.phase, lh, running ? 1 : (started ? 0.1 : 0.25));
+      }
+      var restY = size * 0.04; // 乗り物を少し下げて、顔と帽子の高さを確保
+      var hatDy = (gaitPose(finished ? 'hop' : look.gait, t - 110, look.phase, lh, running || finished ? 1 : 0.2).dy - pose.dy) * 0.9;
+
+      // 影＋走者色のマット（乗り物の絵文字の色に頼らず色違いが分かる）
+      var air = clamp(-pose.dy / (lh * 0.3), 0, 1);
+      var gy = yc + restY + size * 0.4;
+      var mrx = size * (0.56 - 0.12 * air), mry = size * (0.1 - 0.02 * air);
+      ctx.fillStyle = 'rgba(0,0,0,' + (0.28 - 0.12 * air).toFixed(2) + ')';
+      ctx.beginPath(); ctx.ellipse(cx, gy + mry * 0.35, mrx * 1.05, mry * 1.1, 0, 0, 6.283); ctx.fill();
+      ctx.fillStyle = look.tint;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = Math.max(3, size * 0.035);
+      ctx.beginPath(); ctx.ellipse(cx, gy, mrx, mry, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+
+      // 軌跡（名札の下）
+      var ph = Math.min(lh * 0.74, py.fs * 1.5);
+      var pr = cx - size * 0.5;
+      var px = pr - py.w;
+      if (running) drawTrail(i, t, px, yc, size, look);
+
+      // 名前札（走者の後ろ＝左）。揺らさない。全走者を描いた後に最前面へ描く
+      plateQ.push(function () {
+        var pyy = yc - ph / 2;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = color;
+        rrect(ctx, px, pyy, py.w, ph, ph * 0.28);
+        ctx.fill();
+        ctx.restore();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#fff';
+        rrect(ctx, px, pyy, py.w, ph, ph * 0.28);
+        ctx.stroke();
+        ctx.font = '900 ' + py.fs + 'px ' + TEXT_FONT;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        outlined(ctx, py.text, px + py.w / 2, yc + py.fs * 0.05, py.fs, '#fff', 'rgba(0,0,0,0.75)', Math.max(3, py.fs * 0.16));
+      });
+
+      // 乗り物＋乗り手（グループで同じ姿勢）
+      var rotTilt = 0;
+      var dyTilt = 0;
+      if (ev.stumble) {
+        var sk = (t - ev.stumble.t) / (ev.stumble.dur || 1000);
+        rotTilt = -0.55 * Math.sin(clamp(sk, 0, 1) * Math.PI * 0.5 + 0.2) - 0.1 * Math.sin(t * 0.03);
+        dyTilt = size * 0.1;
+      }
+      ctx.save();
+      ctx.translate(cx, yc + restY + pose.dy + dyTilt);
+      ctx.rotate(pose.rot + rotTilt);
+      ctx.scale(pose.sx, pose.sy);
+
+      // 乗り物本体
+      ctx.save();
+      var flip = fix.flip;
+      if (ev.reverse) flip = !flip;
+      var vrot = 0;
+      if (fix.rot) vrot = fix.rot * (ev.reverse ? -1 : 1);
+      if (flip) ctx.scale(-1, 1);
+      if (vrot) ctx.rotate(flip ? -vrot : vrot);
+      var sp = sprites[i];
+      if (sp) {
+        var dw = sp.c.width * size / sp.font;
+        ctx.drawImage(sp.c, -dw / 2, -dw / 2, dw, dw);
+      } else {
+        ctx.font = Math.round(size) + 'px ' + EMOJI_FONT;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000';
+        ctx.fillText(plan.vehicle.emoji, 0, size * 0.04);
+      }
+      ctx.restore();
+
+      // ゼッケン（走者色の布＋レーン番号）
+      var zw = size * 0.36, zh = size * 0.26, zx = size * 0.08 - zw / 2, zy = size * 0.2;
+      ctx.fillStyle = look.tint;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = Math.max(3, size * 0.035);
+      rrect(ctx, zx, zy, zw, zh, zh * 0.25); ctx.fill(); ctx.stroke();
+      ctx.font = '900 ' + Math.round(zh * 0.8) + 'px ' + TEXT_FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      outlined(ctx, String(i + 1), zx + zw / 2, zy + zh / 2 + zh * 0.04, zh * 0.8, '#fff', 'rgba(0,0,0,0.6)', Math.max(2, zh * 0.14));
+
+      // 顔（丸窓）
+      var kind = faceKind(i, t, ev, rk, tension);
+      var emo = look.faces[kind] || look.face;
+      var mem = faceMem[i];
+      if (!mem || t < mem.since) mem = faceMem[i] = { e: emo, since: -99999 };
+      if (mem.e !== emo) { mem.e = emo; mem.since = t; }
+      var popk = (t - mem.since) / 320;
+      var pop = popk >= 0 && popk < 1 ? 1 + 0.4 * Math.sin(popk * Math.PI) : 1;
+      var fr = base * 0.255 * (0.9 + 0.1 * look.size);
+      var fcx = size * 0.03, fcy = -size * 0.3;
+      ctx.save();
+      ctx.translate(fcx, fcy);
+      ctx.scale(pop, pop);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = fr * 0.5;
+      ctx.beginPath(); ctx.arc(0, 0, fr * 1.03, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = look.tint;
+      ctx.lineWidth = fr * 0.34;
+      ctx.beginPath(); ctx.arc(0, 0, fr * 1.03, 0, 6.283); ctx.fill(); ctx.stroke();
+      ctx.font = Math.round(fr * 1.7) + 'px ' + EMOJI_FONT;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#000';
+      ctx.fillText(emo, 0, fr * 0.06);
+      ctx.restore();
+
+      // スカーフ（走者色。顔の下にたなびく）
+      ctx.save();
+      ctx.translate(fcx, fcy + fr * 1.08);
+      ctx.fillStyle = look.tint;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = Math.max(2.5, fr * 0.14);
+      var fl = Math.sin(t * 0.012 + look.phase) * fr * 0.12 * (running ? 1 : 0.3);
+      ctx.beginPath();
+      ctx.moveTo(-fr * 0.5, -fr * 0.1);
+      ctx.lineTo(-fr * 1.5, fr * 0.1 + fl);
+      ctx.lineTo(-fr * 1.15, fr * 0.45 + fl);
+      ctx.lineTo(-fr * 0.3, fr * 0.2);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, fr * 0.78, fr * 0.26, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+      ctx.restore();
+
+      // 帽子（慣性で遅れて揺れる）
+      ctx.save();
+      ctx.translate(fcx, fcy - fr * 0.95);
+      ctx.translate(0, hatDy);
+      ctx.rotate(-pose.rot * 0.6 + 0.2 * Math.sin(t * 0.011 + look.phase) * (running ? 1 : 0.3) - hatDy / lh * 1.6);
+      drawHat(look, fr * 1.15, t);
+      ctx.restore();
+
+      // 汗（後方・緊張）
+      if (!finished && (kind === 'back' || (kind === 'nerv' && tension > 0.8))) {
+        var sw2 = frac(t / 900 + look.phase);
+        ctx.fillStyle = 'rgba(120,200,255,' + (0.95 - sw2 * 0.6).toFixed(2) + ')';
+        ctx.strokeStyle = 'rgba(20,70,140,0.9)';
+        ctx.lineWidth = 2;
+        var sx0 = fcx + fr * 1.15, sy0 = fcy - fr * 0.5 + sw2 * fr * 1.1;
+        ctx.beginPath();
+        ctx.moveTo(sx0, sy0 - fr * 0.4);
+        ctx.quadraticCurveTo(sx0 + fr * 0.38, sy0 + fr * 0.1, sx0, sy0 + fr * 0.3);
+        ctx.quadraticCurveTo(sx0 - fr * 0.38, sy0 + fr * 0.1, sx0, sy0 - fr * 0.4);
+        ctx.fill(); ctx.stroke();
+      }
+      // ぐるぐる星（つまずき）
+      if (ev.stumble) {
+        ctx.fillStyle = '#ffd400';
+        ctx.strokeStyle = '#8a5a00';
+        ctx.lineWidth = 2;
+        for (var q = 0; q < 3; q++) {
+          var qa = t * 0.008 + q * 2.094;
+          pc++;
+          drawStar(fcx + Math.cos(qa) * fr * 1.5, fcy - fr * 1.3 + Math.sin(qa) * fr * 0.4, fr * 0.42, qa);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      // イベント記号
+      var big = Math.min(lh * 0.95, 80);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (ev.stumble) {
+        var wob = 1 + 0.12 * Math.sin(t * 0.02);
+        ctx.font = '900 ' + Math.round(big * wob) + 'px ' + TEXT_FONT;
+        outlined(ctx, '!?', cx + size * 0.62, yc - lh * 0.3, big, '#ffe600', '#c62828', big * 0.2);
+      }
+      if (ev.reverse) {
+        ctx.font = '900 ' + Math.round(big) + 'px ' + TEXT_FONT;
+        outlined(ctx, '↩', cx + size * 0.6, yc - lh * 0.3, big, '#00e5ff', '#003a5c', big * 0.2);
+      }
+      if (ev.swap) {
+        ctx.font = Math.round(big) + 'px ' + EMOJI_FONT;
+        ctx.fillStyle = '#000';
+        var sw = Math.sin(t * 0.03) * 0.15;
+        ctx.save();
+        ctx.translate(cx + size * 0.6, yc - lh * 0.3);
+        ctx.rotate(sw);
+        ctx.fillText('⚡', 0, 0);
+        ctx.restore();
+      }
+
+      // ゴール後：1着はキラキラ
+      if (finished && rank === 0) {
+        ctx.font = Math.round(size * 0.5) + 'px ' + EMOJI_FONT;
+        ctx.fillStyle = '#000';
+        for (var z = 0; z < 2; z++) {
+          pc++;
+          var za = t * 0.004 + z * 3.1;
+          ctx.fillText('✨', cx + (z ? 1 : -1) * size * 0.62, yc - size * 0.15 + Math.sin(za) * size * 0.2);
+        }
+      }
+
+      // ゴール済みバッジ
+      if (finished) {
+        var bd = Math.min(lh * 0.92, 90);
+        var bx = L.x1 + 2 * L.cs + 4 + (W - L.x1 - 2 * L.cs - 4) / 2;
+        var bcol, tcol = '#fff', ecol = '#fff';
+        var rn = rank + 1;
+        if (rn === 1) { bcol = '#f5b800'; tcol = '#3a2600'; }
+        else if (rn === 2) { bcol = '#c3cad2'; tcol = '#1e252b'; }
+        else if (rn === 3) { bcol = '#c9772b'; tcol = '#2e1600'; }
+        else { bcol = '#24304a'; }
+        var bpop = ease(sinceFin / 250);
+        var rad = bd / 2 * (0.6 + 0.4 * bpop);
+        ctx.fillStyle = bcol;
+        ctx.beginPath(); ctx.arc(bx, yc, rad, 0, 6.283); ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = ecol;
+        ctx.stroke();
+        var rf = rad * (rn >= 10 ? 1.0 : 1.3);
+        ctx.font = '900 ' + Math.round(rf) + 'px ' + TEXT_FONT;
+        ctx.fillStyle = tcol;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(rn), bx, yc + rf * 0.06);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    // ---------- 緊迫感の演出 ----------
+    // 心拍の位相は積分して、テンポが変わってもカクつかないようにする
+    function heartBeat(t, tension) {
+      var period = lerp(1500, 760, tension);
+      if (hb.last === null || t < hb.last || t - hb.last > 400) {
+        hb.ph = frac(t / period);
+      } else {
+        hb.ph = frac(hb.ph + (t - hb.last) / period);
+      }
+      hb.last = t;
+      var x = hb.ph;
+      var b1 = Math.exp(-Math.pow((x - 0.05) / 0.07, 2));
+      var b2 = 0.6 * Math.exp(-Math.pow((x - 0.28) / 0.07, 2));
+      return clamp(b1 + b2, 0, 1);
+    }
+
+    // コース上（走者の下）：スピード線・ゴール線の光
+    function drawTensionUnder(wid, t, tension, beat) {
+      if (tension <= 0.02) return;
+      var st = WEATHER_STYLE[wid];
+      var trackH = L.n * L.laneH;
+      // スピード線（太め・少数・色は天気のインク色）
+      if (tension > 0.12) {
+        var cnt = Math.round(3 + 7 * tension);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = st.ink;
+        for (var k = 0; k < cnt; k++) {
+          var len = 220 + hash(k, 21) * 360;
+          var spd = (0.5 + hash(k, 22) * 0.5) * (0.5 + tension);
+          var span = W + len;
+          var x = W - (((t * spd + hash(k, 23) * span * 3) % span));
+          var y = L.top + (0.05 + hash(k, 24) * 0.9) * trackH;
+          var lg = ctx.createLinearGradient(x, 0, x + len, 0);
+          lg.addColorStop(0, st.ink);
+          lg.addColorStop(1, 'rgba(128,128,128,0)');
+          ctx.strokeStyle = lg;
+          ctx.globalAlpha = clamp(0.15 + 0.5 * tension, 0, 0.65);
+          ctx.lineWidth = 4 + hash(k, 25) * 2;
+          pc++;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+      // ゴール線の光
+      var gx = L.x1;
+      var a = tension * (0.4 + 0.4 * beat);
+      var gw = L.cs * 2 + 70 + 50 * tension;
+      var gg = ctx.createLinearGradient(gx - gw, 0, gx + L.cs, 0);
+      gg.addColorStop(0, 'rgba(255,220,60,0)');
+      gg.addColorStop(1, 'rgba(255,235,120,' + a.toFixed(3) + ')');
+      ctx.fillStyle = gg;
+      ctx.fillRect(gx - gw, L.top, gw + L.cs, trackH);
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,230,80,' + clamp(a * 1.4, 0, 1).toFixed(2) + ')';
+      ctx.shadowBlur = 30 + 30 * tension;
+      ctx.fillStyle = 'rgba(255,250,200,' + clamp(0.35 + 0.65 * tension * (0.6 + 0.4 * beat), 0, 1).toFixed(2) + ')';
+      ctx.fillRect(gx - 4, L.top, 8, trackH);
+      ctx.restore();
+    }
+
+    // 画面端の赤い心拍ビネット
+    function drawHeartVignette(tension, beat) {
+      if (tension <= 0.02) return;
+      var a = tension * (0.4 + 0.45 * beat);
+      var diag = Math.sqrt(W * W + H * H);
+      var g = ctx.createRadialGradient(W / 2, H / 2, diag * lerp(0.3, 0.14, tension), W / 2, H / 2, diag * 0.5);
+      g.addColorStop(0, 'rgba(210,0,25,0)');
+      g.addColorStop(1, 'rgba(215,0,30,' + clamp(a, 0, 0.85).toFixed(3) + ')');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // ---------- 天気の前景（粒子数は控えめ。全体予算: 天気<=24 + 軌跡<=24 + スピード線<=10 で 60 以内） ----------
+    function drawWeatherFront(wid, t) {
+      var k, x, y;
+      if (wid === 'rain' || wid === 'thunder' || wid === 'storm') {
+        ctx.fillStyle = 'rgba(30,50,80,0.14)';
+        ctx.fillRect(0, 0, W, H);
+        var cnt = wid === 'rain' ? 18 : 20;
+        ctx.lineCap = 'round';
+        for (k = 0; k < cnt; k++) {
+          var sp = 0.55 + hash(k, 4) * 0.25;
+          y = ((hash(k, 2) + t * 0.0007 * sp) % 1) * (H + 120) - 60;
+          x = hash(k, 1) * (W + 200) - 100 - (y * 0.25);
+          ctx.strokeStyle = 'rgba(40,90,170,0.7)';
+          ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 14, y + 52); ctx.stroke();
+          ctx.strokeStyle = 'rgba(200,225,255,0.85)';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 14, y + 52); ctx.stroke();
+        }
+        if (wid !== 'rain') {
+          var ph = (t % 4000) / 4000;
+          if (ph < 0.06) {
+            ctx.fillStyle = 'rgba(255,255,255,' + (0.35 * (1 - ph / 0.06)).toFixed(2) + ')';
+            ctx.fillRect(0, 0, W, H);
+          }
+        }
+      } else if (wid === 'snow') {
+        for (k = 0; k < 16; k++) {
+          var r = 8 + hash(k, 3) * 7;
+          y = ((hash(k, 2) + t * 0.00007 * (0.7 + hash(k, 5))) % 1) * (H + 40) - 20;
+          x = hash(k, 1) * W + Math.sin(t * 0.0011 + k) * 24;
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.strokeStyle = 'rgba(70,110,170,0.8)';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); ctx.stroke();
+        }
+      } else if (wid === 'fog') {
+        for (k = 0; k < 5; k++) {
+          y = H * (0.14 + 0.17 * k) + Math.sin(t * 0.0004 + k) * 14;
+          var bw = W * 0.55, bh = H * 0.07;
+          var off = ((t * 0.02 * (0.6 + k * 0.15) + k * 500) % (W + bw * 2)) - bw;
+          ctx.save();
+          ctx.translate(off, y);
+          ctx.scale(1, bh / bw);
+          var g = ctx.createRadialGradient(0, 0, 0, 0, 0, bw);
+          g.addColorStop(0, 'rgba(240,242,246,0.5)');
+          g.addColorStop(1, 'rgba(240,242,246,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(0, 0, bw, 0, 6.283); ctx.fill();
+          ctx.restore();
+        }
+        ctx.fillStyle = 'rgba(225,230,235,0.08)';
+        ctx.fillRect(0, 0, W, H);
+      } else if (wid === 'sunset') {
+        var sg = ctx.createLinearGradient(0, 0, W, 0);
+        sg.addColorStop(0, 'rgba(255,90,40,0.22)');
+        sg.addColorStop(1, 'rgba(255,150,60,0.05)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(0, 0, W, H);
+        var vg = ctx.createLinearGradient(0, H * 0.6, 0, H);
+        vg.addColorStop(0, 'rgba(120,30,40,0)');
+        vg.addColorStop(1, 'rgba(120,30,40,0.25)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, H * 0.6, W, H * 0.4);
+      } else if (wid === 'night') {
+        ctx.fillStyle = 'rgba(5,10,40,0.16)';
+        ctx.fillRect(0, 0, W, H);
+        for (k = 0; k < 8; k++) {
+          // ふわふわ光る蛍
+          x = hash(k, 8) * W + Math.sin(t * 0.0006 + k * 2) * 40;
+          y = L.top + hash(k, 9) * (H - L.top - L.bot);
+          var a = 0.4 + 0.4 * Math.sin(t * 0.003 + k);
+          ctx.fillStyle = 'rgba(255,255,140,' + a.toFixed(2) + ')';
+          ctx.beginPath(); ctx.arc(x, y, 7, 0, 6.283); ctx.fill();
+        }
+      } else if (wid === 'wind') {
+        ctx.lineCap = 'round';
+        for (k = 0; k < 8; k++) {
+          var spd = 0.5 + hash(k, 4) * 0.5;
+          x = ((hash(k, 1) + t * 0.00035 * spd) % 1) * (W + 600) - 300;
+          y = hash(k, 2) * H;
+          var len = 140 + hash(k, 6) * 160;
+          ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.bezierCurveTo(x + len * 0.3, y - 14, x + len * 0.6, y + 14, x + len, y);
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(30,110,100,0.55)';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+        // 舞う葉っぱ
+        ctx.font = '40px ' + EMOJI_FONT;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000';
+        for (k = 0; k < 3; k++) {
+          x = ((hash(k, 11) + t * 0.0003) % 1) * (W + 200) - 100;
+          y = hash(k, 12) * H + Math.sin(t * 0.002 + k) * 30;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(t * 0.003 + k); ctx.fillText('🍃', 0, 0); ctx.restore();
+        }
+        ctx.textAlign = 'left';
+      } else if (wid === 'cloudy') {
+        ctx.fillStyle = 'rgba(70,80,95,0.12)';
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function draw(t, view) {
+      if (!plan || !L) return;
+      view = view || {};
+      t = t || 0;
+      var wid = weatherId();
+      var zoom = ease(view.zoom || 0);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // ズーム
+      var s = 1 + 1.2 * zoom;
+      var tx = 0, ty = 0;
+      if (zoom > 0 && plan.photo) {
+        var ra = laneRect(plan.photo.a), rb = laneRect(plan.photo.b);
+        var fx = L.x1 - L.emoji * 0.6;
+        var fy = (ra.y + ra.h / 2 + rb.y + rb.h / 2) / 2;
+        var cx = lerp(fx, W * 0.6, zoom);
+        var cy = lerp(fy, H * 0.5, zoom);
+        tx = cx - fx * s;
+        ty = cy - fy * s;
+        tx = clamp(tx, W - W * s, 0);
+        ty = clamp(ty, H - H * s, 0);
+      }
+
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.scale(s, s);
+      var tension = clamp(view.tension || 0, 0, 1);
+      var beat = tension > 0 ? heartBeat(t, tension) : 0;
+      pc = 0;
+      drawSky(wid, t);
+      drawTrack(wid, t);
+      drawTensionUnder(wid, t, tension, beat);
+      drawWeatherFront(wid, t);   // 天気は走者・名前札の背面
+      var i;
+      var ranks = ranksAt(t);
+      plateQueue = [];
+      for (i = 0; i < L.n; i++) drawRunner(i, t, ranks[i], tension);
+      for (i = 0; i < plateQueue.length; i++) plateQueue[i]();
+      plateQueue = [];
+      ctx.restore();
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawHeartVignette(tension, beat);
+      api.particles = pc;
+
+      if (view.slow) {
+        var vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.95);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, 'rgba(0,0,0,0.38)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      if (view.frozen) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+        ctx.fillStyle = 'rgba(80,80,90,0.28)';
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      if (view.flash > 0) {
+        ctx.fillStyle = 'rgba(255,255,255,' + clamp(view.flash, 0, 1).toFixed(3) + ')';
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function snapshot() {
+      var c = document.createElement('canvas');
+      c.width = canvas.width;
+      c.height = canvas.height;
+      var cx = c.getContext('2d');
+      cx.drawImage(canvas, 0, 0);
+      return c;
+    }
+
+    api = { setPlan: setPlan, resize: resize, draw: draw, snapshot: snapshot, laneRect: laneRect, looks: looks, particles: 0 };
+    return api;
+  }
+
+  return { create: create, LANE_COLORS: LANE_COLORS };
+})();
+
+</script>
+<script>
+/* app.js */
+/* app.js - 画面遷移・統合・演出オーバーレイ */
+var RR = (typeof window !== 'undefined') ? (window.RR = window.RR || {}) : {};
+
+(function () {
+  'use strict';
+  if (typeof window === 'undefined') return;
+
+  // ---------- テスト用ログ ----------
+  var log = window.__raceLog = { goalOrder: [], resultOrder: [], done: false, errors: [], subs: [] };
+  function logErr(msg) { try { log.errors.push(String(msg)); } catch (e) {} }
+  window.onerror = function (msg, src, line, col) {
+    logErr(msg + ' @' + (src || '') + ':' + line + ':' + col);
+    return false;
+  };
+  window.addEventListener('unhandledrejection', function (ev) {
+    logErr('unhandledrejection: ' + (ev && ev.reason && (ev.reason.message || ev.reason)));
+  });
+
+  // ---------- ユーティリティ ----------
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function aud(fn) {
+    try {
+      var A = RR.Audio;
+      if (A && typeof A[fn] === 'function') return A[fn].apply(A, Array.prototype.slice.call(arguments, 1));
+    } catch (e) { logErr('audio.' + fn + ': ' + e.message); }
+    return undefined;
+  }
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  var speed = (function () {
+    var m = /[?&]speed=([0-9.]+)/.exec(window.location.search || '');
+    var v = m ? parseFloat(m[1]) : 1;
+    return (v > 0 && isFinite(v)) ? v : 1;
+  })();
+
+  var DEFAULT_NAMES = ['あおい', 'はると', 'こはる', 'そうた', 'みなと', 'ゆい', 'れん', 'さくら'];
+
+  // ---------- 状態 ----------
+  var rend = null;
+  var S = null;            // 現在のレース状態
+  var speechOn = true, muted = false;
+  var audioInited = false;
+  var currentScreen = 'setup';
+
+  function show(name) {
+    currentScreen = name;
+    ['setup', 'race', 'result'].forEach(function (id) {
+      $(id).classList.toggle('active', id === name);
+    });
+    if (name === 'race' && rend) { try { rend.resize(); } catch (e) { logErr('resize: ' + e.message); } }
+  }
+
+  // ---------- 準備画面 ----------
+  var parsedNames = [];
+  function readNames() {
+    return $('names').value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+  }
+  function parseTime(str) {
+    var m = /^\s*(\d{1,2})\s*[:：]\s*(\d{2})\s*$/.exec(str || '');
+    if (!m) return null;
+    var h = +m[1], mi = +m[2];
+    if (h > 23 || mi > 59) return null;
+    return h * 60 + mi;
+  }
+  function validate() {
+    parsedNames = readNames();
+    var n = parsedNames.length, msg = '', ok = true;
+    if (n < 2) { msg = '2人以上入力してください（いま ' + n + '人）'; ok = false; }
+    else if (n > 12) { msg = '12人までです（いま ' + n + '人）'; ok = false; }
+    else if (parseTime($('optStart').value) === null) { msg = '開始時刻は 13:00 の形式で入力してください'; ok = false; }
+    else {
+      var mn = parseInt($('optMin').value, 10);
+      if (!(mn >= 1 && mn <= 120)) { msg = '1人あたりの分数は 1〜120 で入力してください'; ok = false; }
+    }
+    var el = $('setupMsg');
+    el.textContent = ok ? ('出走 ' + n + '人  準備OK！') : msg;
+    el.classList.toggle('ok', ok);
+    $('btnStart').disabled = !ok;
+    return ok;
+  }
+  function saveSetup() {
+    lsSet('rr.names', $('names').value);
+    lsSet('rr.start', $('optStart').value);
+    lsSet('rr.min', $('optMin').value);
+    lsSet('rr.speech', speechOn ? '1' : '0');
+  }
+  function loadSetup() {
+    var nm = lsGet('rr.names');
+    $('names').value = (nm && nm.trim()) ? nm : DEFAULT_NAMES.join('\n');
+    var st = lsGet('rr.start'); if (st) $('optStart').value = st;
+    var mn = lsGet('rr.min'); if (mn) $('optMin').value = mn;
+    var sp = lsGet('rr.speech'); if (sp === '0') speechOn = false;
+  }
+
+  // ---------- 上部ボタン ----------
+  function refreshControls() {
+    var b = $('btnSound');
+    b.textContent = muted ? '🔇 音 OFF' : '🔊 音 ON';
+    b.classList.toggle('off', muted);
+    var s = $('btnSpeech');
+    s.textContent = speechOn ? '🗣 読み上げ ON' : '🗣 読み上げ OFF';
+    s.classList.toggle('off', !speechOn);
+    $('optSpeech').checked = speechOn;
+  }
+  function setSpeech(v) {
+    speechOn = !!v;
+    aud('setSpeech', speechOn);
+    if (!speechOn) aud('cancelSpeech');
+    refreshControls(); saveSetup();
+  }
+  function initAudioOnce() {
+    if (audioInited) return;
+    audioInited = true;
+    aud('init');
+    aud('setMuted', muted);
+    aud('setSpeech', speechOn);
+  }
+
+  // ---------- 演出ユーティリティ ----------
+  function later(fn, ms) {
+    var id = setTimeout(function () { try { fn(); } catch (e) { logErr('timer: ' + e.message); } }, ms);
+    if (S) S.timers.push(id);
+    return id;
+  }
+  function clearTimers() {
+    if (!S) return;
+    S.timers.forEach(clearTimeout);
+    S.timers = [];
+    if (S.introTimer) clearTimeout(S.introTimer);
+  }
+  function showTelop(text, ms, big, kind) {
+    var el = $('telop');
+    el.innerHTML = '<span>' + esc(text) + '</span>';
+    el.className = (big ? 'big ' : '') + (kind === 'lc' ? 'lc' : '');
+    S.telopUntil = performance.now() + ms;
+    S.telopKind = kind || 'event';
+  }
+  function showSub(line) {
+    var el = $('sub');
+    el.className = line.role === 'kai' ? 'kai' : 'ana';
+    el.innerHTML = '<span><b><i>' + (line.role === 'kai' ? '解説' : '実況') + '</i></b><span class="tx">' + esc(line.text) + '</span></span>';
+  }
+  function hideSub() { $('sub').classList.add('hidden'); }
+  function hideOverlays() {
+    ['telop', 'sub', 'freezeMsg', 'count', 'intro', 'film', 'skipHint', 'spurt'].forEach(function (id) { $(id).classList.add('hidden'); });
+  }
+
+  // =====================================================================
+  // 実況エンジン（状況 → 短い文。優先度・古い文の破棄・ana/kai 交互）
+  //  - 文は「その瞬間の実データ」から作る。事前スケジュールはしない。
+  //  - 字幕は読み上げが実際に始まった瞬間（onstart）に出し、onend+0.6s で消す。
+  //    音声なし/読み上げOFFでは生成した瞬間に出して 2.2s で消す（audio.speak が onstart/onend を保証）。
+  //  - high は発話を割り込み、normal は発話中なら捨てる。1.2s 以内に始まらない文は捨てる。
+  // =====================================================================
+  // 台詞の書式: '本文' または '本文｜ツッコミ'（ツッコミは本文の後に相方が言う）。
+  //   # = 走者名, @ = 2人目の名前, % = その走者の帽子, $ = 今回の乗り物
+  //   ana = 実況（煽り役・ボケ）、kai = 解説（ツッコミ・ぼやき）。
+  var PH = {
+    stumble: { ana: ['#さん転倒！｜受け身は百点です', 'あっ、#さんが！｜見なかったことにしましょう', '#さんつまずいた！｜何もない所でしたね', '#さん、止まった！｜景色を見てますね'],
+               kai: ['#さん、痛い…', '#さん、今のは減点です'] },
+    boost:   { ana: ['#さん急加速！｜朝ごはん何食べたんですか', '#さん、きた！｜急に本気出しましたね', '#さん猛ダッシュ！｜締め切り前の顔です', '#さん、飛んだ！'],
+               kai: ['#さん、大人げない！', '#さん、速い！'] },
+    reverse: { ana: ['#さん逆走！？｜忘れ物ですかね', '#さん、どこへ！？｜帰ろうとしてます', '#さん、逆です！｜ゴールはあっちです！'],
+               kai: ['#さん、向きが…'] },
+    swap:    { ana: ['入れ替わった！？｜今の、反則では？', '#さんと@さんが！？', '何が起きた！？｜私も見てませんでした'],
+               kai: ['位置が入れ替わった？'] },
+    lead:    { ana: ['先頭交代！#さん！', '#さんがトップ！', '#さん抜いた！｜容赦ないですね', '#さん前へ！'],
+               kai: ['#さん、ドヤ顔です', 'トップは#さんに'] },
+    spurt:   { ana: ['ラストスパート！｜ここで本気出す人います', 'ここから勝負！', '最後の直線！｜全員、目が本気です'],
+               kai: ['ここからが勝負です'] },
+    photo:   { ana: ['#さんか！@さんか！', '#さん！@さん！', '#さんか@さんか！'], kai: ['#さんと@さん僅差！'] },
+    leader:  { ana: ['#さん先頭！｜まだ油断できません', '#さんリード！｜もう勝った顔してます', '#さんが引っ張る！', '先頭は#さん！｜後ろ、全然見てません'],
+               kai: ['#さん、余裕の表情', '#さん、鼻歌まじりです'] },
+    close:   { ana: ['#さんと@さん並んだ！｜お互い譲る気ゼロです', '#さん@さん、接戦！', '#さんに@さん！｜近い近い！'],
+               kai: ['#さんと@さん、バチバチです', '#さんと@さん、目が合った'] },
+    chase:   { ana: ['#さん追い上げ！｜急にやる気が出ました', '#さん、ぐんぐん！', '#さん上がってきた！｜寝たふりでしたね'],
+               kai: ['#さん、いい脚です', '#さん、本気モードです'] },
+    drop:    { ana: ['#さん、下がった！｜お腹すいたんですかね', '#さん失速！｜電池切れでしょうか', '#さん、どうした！｜考えごとですかね'],
+               kai: ['#さん、息切れです'] },
+    last:    { ana: ['#さん最後尾！｜作戦です、たぶん', '#さん、まだまだ！｜景色を楽しんでますね', '#さん、ゆっくり！｜お散歩ペースです', '#さん、のんびり！｜発表の準備中ですかね'],
+               kai: ['#さん、大物の風格', '#さん、マイペースです'] },
+    look:    { ana: ['%の#さん！｜今日いちばんオシャレです', '%の#さん、目立つ！｜走りより帽子が目立ちます', '#さんの%、揺れてる！｜飛ばされないで！'],
+               kai: ['%、似合いますね#さん'] },
+    veh:     { ana: ['みなさん$に必死！｜大人が本気です', '$レース白熱！｜会議より白熱してます', '$、乗りこなしてます！｜練習してきましたね'],
+               kai: ['$、意外と速いですね'] },
+    start:   { ana: ['さあスタート！｜みなさん、いい顔です', '#さん好スタート！｜フライングでは？'], kai: ['まずは様子見です'] },
+    goal:    { ana: ['#さんゴール！', '#さん、完走！'], kai: ['#さん、お疲れさま'] },
+    freeze:  { ana: ['時が止まった！？｜放送事故ですか？'], kai: ['……止まった？'] },
+    unfreeze:{ ana: ['ウソでした！続行！｜心臓に悪いです', 'ウソです！再開！'], kai: ['再開です'] }
+  };
+  // 割り込みで言う種類（短くしたいので本文の上限を小さく）
+  var HIGHK = { stumble: 1, boost: 1, reverse: 1, swap: 1, lead: 1, spurt: 1, photo: 1, freeze: 1, unfreeze: 1 };
+  var HAT_WORD = { '👑': '王冠', '🎩': 'シルクハット', '🧢': 'キャップ', '🎀': 'リボン', '🌸': 'お花', '⛑️': 'ヘルメット',
+    '🎓': '角帽', '🪖': 'ヘルメット', '👒': '麦わら帽子', '🍄': 'キノコ帽', '🍓': 'イチゴ帽', '🌻': 'ひまわり', horn: 'ユニコーン角', prop: 'プロペラ帽' };
+
+  function newCm() {
+    return { subId: 0, cur: 0, shownId: 0, busy: false, replyPending: false, idleSince: -9999, lastRole: 'kai', anaRun: 0,
+      lastGenT: -9999, lastHighT: -9999, nextAt: 900, recent: {}, lastKey: '', lastKind: '', lcIdx: 0, stable: -1, cand: -1,
+      candSince: 0, lastLcT: -9999, spurt: false, preShot: false, frozeSaid: false, lookCount: 0, vehSaid: false };
+  }
+  function nm(i) { return S.names[i]; }
+  function hatWord(i) {
+    var lk = rend && rend.looks && rend.looks[i];
+    return lk && typeof lk.hat === 'string' ? (HAT_WORD[lk.hat] || '') : '';
+  }
+  function fillTp(tp, a, b) {
+    var needHat = tp.indexOf('%') >= 0, needVeh = tp.indexOf('$') >= 0;
+    var hw = needHat ? hatWord(a) : '', vl = S.plan.vehicle && S.plan.vehicle.label;
+    if (needHat && !hw) return null;
+    if (needVeh && !vl) return null;
+    return tp.replace(/#/g, function () { return nm(a); }).replace(/@/g, function () { return b == null ? '' : nm(b); })
+      .replace(/%/g, function () { return hw; }).replace(/\$/g, function () { return vl || ''; });
+  }
+
+  function pickText(kind, role, a, b) {
+    var pool = PH[kind]; if (!pool) return null;
+    var useRole = pool[role] && pool[role].length ? role : (role === 'ana' ? 'kai' : 'ana');
+    var list = pool[useRole];
+    if (!list || !list.length) return null;
+    var cm = S.cm, lim = HIGHK[kind] ? 16 : 20;
+    var items = [];
+    list.forEach(function (tp, i) {
+      var parts = tp.split('｜');
+      var main = fillTp(parts[0], a, b); if (main == null) return;
+      var reply = parts[1] ? fillTp(parts[1], a, b) : null;
+      if (reply && reply.length > 20) reply = null;
+      items.push({ i: i, text: main, reply: reply });
+    });
+    if (!items.length) return null;
+    var ok = items.filter(function (it) { return it.text.length <= lim; });
+    if (!ok.length) {   // 名前が長くて全部上限超え：いちばん短いものを使う
+      var bi = items[0]; items.forEach(function (it) { if (it.text.length < bi.text.length) bi = it; });
+      ok = [bi];
+    }
+    // 直近で使った言い回しを避ける
+    var key = kind + ':' + useRole, last = cm.recent[key];
+    var cand = ok.filter(function (it) { return it.i !== last; });
+    if (!cand.length) cand = ok;
+    var it = cand[Math.floor(Math.random() * cand.length)];
+    cm.recent[key] = it.i;
+    return { text: it.text, role: useRole, reply: it.reply };
+  }
+
+  // ana（ボケ・煽り）を基本にし、3回続いたら kai に回す
+  function chooseRole() { return S.cm.anaRun >= 2 ? 'kai' : 'ana'; }
+
+  // 1文を生成して出す。valid() が偽なら（字幕が出る時点で状況が変わっていれば）字幕を出さず捨てる。
+  function say(kind, a, b, pri, valid) {
+    var pk = pickText(kind, chooseRole(), a, b);
+    if (!pk) return;
+    sayText(kind, pk.text, pk.role, pri, valid, pk.reply);
+  }
+
+  function sayText(kind, text, role, pri, valid, reply) {
+    var cm = S.cm, st = S;
+    var id = ++cm.subId, genT = Math.round(S.t);
+    cm.cur = id; cm.busy = true; cm.replyPending = false; cm.lastGenT = S.t; cm.lastKind = kind;
+    cm.lastRole = role; cm.anaRun = role === 'ana' ? cm.anaRun + 1 : 0;
+    if (pri === 'high') cm.lastHighT = S.t;
+    var started = false, real = false;
+    function idle() { if (cm.cur === id) { cm.busy = false; cm.idleSince = S.t; } }
+    function onstart(isReal) {
+      if (S !== st || started) return;
+      started = true; real = !!isReal;
+      if (valid && !valid()) { cm.shownId = 0; aud('cancelSpeech'); idle(); return; }
+      cm.shownId = id;
+      showSub({ role: role, text: text });
+      $('sub').classList.remove('hidden');
+      log.subs.push({ t: Math.round(S.t), text: text, shownAt: real ? 'start' : 'timer', genT: genT, kind: kind });
+    }
+    function onend() {
+      if (S !== st) return;
+      idle();
+      if (cm.shownId !== id) return;
+      // ツッコミ：本文が最後まで言えたときだけ、相方がすぐ続ける
+      if (reply && cm.cur === id) {
+        cm.replyPending = true;
+        later(function () {
+          if (S !== st || cm.cur !== id) return;
+          cm.replyPending = false;
+          if (cm.busy || S.phase !== 'race' || S.t >= S.plan.slowFrom) return;
+          sayText(kind + '+', reply, role === 'ana' ? 'kai' : 'ana', 'normal', valid, null);
+        }, 120 / speed);
+      }
+      var d = real ? 600 : 0;
+      later(function () { if (cm.shownId === id) { cm.shownId = 0; hideSub(); } }, d);
+    }
+    function ondrop() { if (S === st) idle(); }
+    var r = aud('speak', text, role, {
+      priority: pri, fallbackMs: 2200 / speed, maxWaitMs: 1200,
+      onstart: onstart, onend: onend, ondrop: ondrop
+    });
+    if (r === undefined && !started) {   // audio 層が使えない：字幕のみ
+      onstart(false);
+      later(onend, 2200 / speed);
+    }
+  }
+
+  // 現在の順位（先頭が [0]）
+  function ranksAt(t) {
+    var plan = S.plan, idx = [], i;
+    for (i = 0; i < plan.n; i++) idx.push(i);
+    idx.sort(function (x, y) { return (plan.progress(y, t) - plan.progress(x, t)) || (x - y); });
+    return idx;
+  }
+  function leaderNow(t) {
+    var plan = S.plan;
+    try { var l = plan.leaderAt(t); if (typeof l === 'number' && l >= 0) return l; } catch (e) {}
+    return ranksAt(t)[0];
+  }
+  function finalFromOf(plan) { return typeof plan.finalFrom === 'number' ? plan.finalFrom : plan.photo.t0 - 5000; }
+
+  function onLeadChange(leader, t, now) {
+    var cm = S.cm;
+    cm.lastLcT = t;
+    var eventTelop = S.telopKind === 'event' && S.telopUntil && now < S.telopUntil;
+    if (!eventTelop) showTelop('先頭交代！', 1100 / speed, false, 'lc');
+    if (t - cm.lastHighT >= 1200) {
+      say('lead', leader, null, 'high', function () { return leaderNow(S.t) === leader; });
+    }
+  }
+
+  function showSpurt() {
+    var el = $('spurt');
+    el.classList.remove('hidden');
+    el.innerHTML = '<span>🔥 ラストスパート！ 🔥</span>';
+    // 再生し直し
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+    // 走者を隠す時間を短くするため、1.5秒で横切って消える
+    later(function () { el.classList.add('hidden'); }, 1500 / speed);
+  }
+
+  function genNormal(t) {
+    var plan = S.plan, cm = S.cm, n = plan.n;
+    var order = ranksAt(t), lead = leaderNow(t);
+    var pr = function (i, tt) { return plan.progress(i, tt == null ? t : tt); };
+    var cands = [];
+    if (t < 2500 && !cm.recent.started) {
+      cm.recent.started = 1;
+      say('start', lead, null, 'normal'); return;
+    }
+    if (n >= 2) {
+      var second = order[0] === lead ? order[1] : order[0];
+      if (pr(lead) - pr(second) < 0.012) cands.push({ k: 'close', a: lead, b: second, w: 3 });
+    }
+    var old = ranksAt(Math.max(0, t - 2000)), oldRank = {}, bestG = 0, bestI = -1;
+    old.forEach(function (i, r) { oldRank[i] = r; });
+    order.forEach(function (i, r) { var g = oldRank[i] - r; if (g > bestG && r > 0) { bestG = g; bestI = i; } });
+    if (bestG >= 2) cands.push({ k: 'chase', a: bestI, w: 4 });
+    // 2秒で2つ以上順位を落とした人をいじる
+    var worstG = 0, worstI = -1;
+    order.forEach(function (i, r) { var g = r - oldRank[i]; if (g > worstG) { worstG = g; worstI = i; } });
+    if (worstG >= 2) cands.push({ k: 'drop', a: worstI, w: 3 });
+    var lastI = order[n - 1];
+    if (n >= 3 && t > 4000) cands.push({ k: 'last', a: lastI, w: 2.5 });
+    var inFinal = t >= finalFromOf(plan);
+    if (!inFinal && t > 3500) {
+      // 帽子いじり（1レース2回まで）と乗り物いじり（1回）は中盤だけ
+      if (cm.lookCount < 2) {
+        var mids = order.slice(1, n).filter(function (i) { return hatWord(i); });
+        if (mids.length) cands.push({ k: 'look', a: mids[Math.floor(Math.random() * mids.length)], w: 2 });
+      }
+      if (!cm.vehSaid) cands.push({ k: 'veh', a: lead, w: 1.5 });
+    }
+    cands.push({ k: 'leader', a: lead, w: 2 });
+    // 直前と同じ種類・同じ話題を避ける
+    var f = cands.filter(function (c) { return c.k !== cm.lastKind && (c.k + c.a) !== cm.lastKey; });
+    if (!f.length) f = cands;
+    var tot = 0; f.forEach(function (c) { tot += c.w; });
+    var x = Math.random() * tot, pick = f[0];
+    for (var i = 0; i < f.length; i++) { x -= f[i].w; if (x <= 0) { pick = f[i]; break; } }
+    cm.lastKey = pick.k + pick.a;
+    var valid = null;
+    if (pick.k === 'leader') valid = function () { return leaderNow(S.t) === pick.a; };
+    if (pick.k === 'last') valid = function () { var o = ranksAt(S.t); return o[o.length - 1] === pick.a; };
+    if (pick.k === 'close') valid = function () {
+      return Math.abs(plan.progress(pick.a, S.t) - plan.progress(pick.b, S.t)) < 0.02;
+    };
+    if (pick.k === 'look') cm.lookCount++;
+    if (pick.k === 'veh') cm.vehSaid = true;
+    say(pick.k, pick.a, pick.b, 'normal', valid);
+  }
+
+  // 毎フレーム（フリーズ中以外）呼ぶ
+  function runCommentary(t, now, frozen) {
+    var plan = S.plan, cm = S.cm;
+    var inFinal = t >= finalFromOf(plan);
+
+    // 先頭交代
+    if (t >= 1200 && t < plan.slowFrom) {
+      if (plan.leadChanges && plan.leadChanges.length) {
+        var fire = null;
+        while (cm.lcIdx < plan.leadChanges.length && plan.leadChanges[cm.lcIdx].t <= t) fire = plan.leadChanges[cm.lcIdx++];
+        if (fire && t - fire.t < 600 && leaderNow(t) === fire.leader && t - cm.lastLcT >= 900) onLeadChange(fire.leader, t, now);
+        cm.stable = leaderNow(t);
+      } else {
+        var cur = leaderNow(t);
+        if (cm.stable < 0) cm.stable = cur;
+        if (cur !== cm.stable) {
+          if (cm.cand !== cur) { cm.cand = cur; cm.candSince = t; }
+          else if (t - cm.candSince >= 250) {
+            var prev = cm.stable; cm.stable = cur;
+            if (t - cm.lastLcT >= 1000 && prev !== cur) onLeadChange(cur, t, now);
+          }
+        } else cm.cand = -1;
+      }
+    } else if (plan.leadChanges) {
+      while (cm.lcIdx < plan.leadChanges.length && plan.leadChanges[cm.lcIdx].t <= t) cm.lcIdx++;
+    }
+
+    // ラストスパート
+    if (!cm.spurt && inFinal) {
+      cm.spurt = true;
+      showSpurt();
+      say('spurt', 0, null, 'high');
+      cm.nextAt = Math.max(cm.nextAt, t + 1800);
+    }
+    // 写真判定直前（スロー突入）
+    if (!cm.preShot && t >= plan.slowFrom) {
+      cm.preShot = true;
+      var o = ranksAt(t);
+      if (plan.n >= 2) say('photo', o[0], o[1], 'high');
+      return;
+    }
+    // 定期の状況実況
+    // 掛け合いが途切れないよう、前の発話が終わって少し間（中盤0.5秒・終盤0.3秒）を置いたら次へ
+    if (!cm.busy && !cm.replyPending && t >= cm.nextAt && t < plan.slowFrom && t - cm.lastGenT >= 900 &&
+        t - cm.idleSince >= (inFinal ? 300 : 500)) {
+      genNormal(t);
+      cm.nextAt = t + (inFinal ? 1500 : 1800);
+    }
+  }
+
+  // ---------- レース開始 ----------
+  function beginRace(names) {
+    if (S) clearTimers();
+    aud('stopLoop'); aud('setSlow', false); aud('setTension', 0); aud('cancelSpeech');
+    log.goalOrder.length = 0; log.resultOrder.length = 0; log.subs.length = 0; log.done = false;
+    if (!(RR.Core && RR.Core.planRace)) { $('setupMsg').textContent = 'エラー: RR.Core が読み込まれていません'; logErr('RR.Core missing'); return; }
+    var plan;
+    try { plan = RR.Core.planRace(names); } catch (e) { logErr('planRace: ' + e.message); return; }
+    if (!rend && RR.Renderer && RR.Renderer.create) {
+      try { rend = RR.Renderer.create($('cv')); } catch (e) { logErr('renderer: ' + e.message); }
+    }
+    S = {
+      plan: plan, names: names, phase: 'intro', t: 0, last: 0, slow: false, zoom: 0,
+      ei: 0, ci: 0, goaled: [], goalCount: 0, allGoalT: -1, photoShot: false,
+      freezeDone: false, freezeUntil: 0, wasFrozen: false, flashStart: -1,
+      telopUntil: 0, telopKind: '', timers: [], introTimer: 0, skip: null,
+      cm: newCm(), tension: 0, tensionSent: 0
+    };
+    hideOverlays();
+    show('race');
+    if (rend) { try { rend.setPlan(plan); rend.resize(); } catch (e) { logErr('setPlan: ' + e.message); } }
+    runIntro();
+  }
+
+  var INTRO_MS = [1800, 1800, 1700];
+  function runIntro() {
+    var p = S.plan, st = S;
+    var intro = $('intro');
+    // 事前の天気・乗り物紹介（負の時刻の実況）は読み上げのみ（ボードが字幕を隠すため）
+    var pre = (p.commentary || []).filter(function (l) { return l && l.t < 0; });
+    function preSpeak(k) {
+      var l = pre[k];
+      if (l && speechOn) aud('speak', l.text, l.role, { priority: 'high', maxWaitMs: 0, fallbackMs: 1 });
+    }
+    var steps = [
+      function () {
+        preSpeak(0);
+        intro.innerHTML = '<div class="board"><div class="bTitle">📺 本日のレース天気予報</div><div class="bBig">' + esc(p.weather.emoji) +
+          '</div><div class="bLabel">' + esc(p.weather.label) + '</div><div class="bText">' + esc(p.weather.forecast || '') + '</div></div>';
+        aud('play', 'tick');
+      },
+      function () {
+        preSpeak(1);
+        intro.innerHTML = '<div class="board"><div class="bTitle">🎰 本日の乗り物ガチャ</div><div class="bBig">' + esc(p.vehicle.emoji) +
+          '</div><div class="bLabel">' + esc(p.vehicle.label) + '</div><div class="bText">' + p.n + esc(p.vehicle.counter || '人') + 'が出走！</div></div>';
+        aud('play', 'tick');
+      },
+      function () {
+        intro.innerHTML = '<div class="board envb"><div class="bTitle">🔏 封印の封筒</div><div class="bBig">✉️</div><div class="seal">' + esc(p.sealCode) +
+          '</div><div class="bText">順位はたった今、決まりました。<br>中身は発表までヒミツ！</div></div>';
+        aud('play', 'tick');
+      }
+    ];
+    var idx = -1;
+    intro.classList.remove('hidden');
+    $('skipHint').classList.remove('hidden');
+    function next() {
+      if (S !== st || st.phase !== 'intro') return;
+      clearTimeout(st.introTimer);
+      idx++;
+      if (idx >= steps.length) {
+        intro.classList.add('hidden');
+        $('skipHint').classList.add('hidden');
+        st.skip = null;
+        countdown();
+        return;
+      }
+      steps[idx]();
+      st.introTimer = setTimeout(next, INTRO_MS[idx] / speed);
+    }
+    st.skip = next;
+    next();
+  }
+
+  function countdown() {
+    var st = S;
+    aud('cancelSpeech');
+    st.phase = 'count';
+    var seq = ['3', '2', '1', 'GO!'], i = 0, el = $('count');
+    function step() {
+      if (S !== st) return;
+      if (i >= seq.length) { el.classList.add('hidden'); return; }
+      el.innerHTML = '<span>' + seq[i] + '</span>';
+      el.classList.remove('hidden');
+      var go = (i === seq.length - 1);
+      aud('play', go ? 'go' : 'tick');
+      i++;
+      if (go) {
+        st.phase = 'race';
+        st.last = performance.now();
+        aud('startLoop');
+        later(function () { el.classList.add('hidden'); }, 700 / speed);
+      } else {
+        later(step, 700 / speed);
+      }
+    }
+    step();
+  }
+
+  // ---------- メインループ ----------
+  var errSeen = {};
+  function frame(now) {
+    window.requestAnimationFrame(frame);
+    if (!S) return;
+    try {
+      if (S.phase === 'race') stepRace(now);
+      else if ((S.phase === 'intro' || S.phase === 'count') && rend) {
+        rend.draw(0, { zoom: 0, slow: false, frozen: false, flash: 0 });
+      }
+    } catch (e) {
+      var k = String(e && e.message);
+      if (!errSeen[k]) { errSeen[k] = 1; logErr('frame: ' + k + (e && e.stack ? ' | ' + e.stack.split('\n')[1] : '')); }
+    }
+  }
+
+  function stepRace(now) {
+    var plan = S.plan;
+    var dtReal = Math.min(Math.max(now - S.last, 0), 100);
+    S.last = now;
+
+    // フリーズ（レース時計停止）
+    if (!S.freezeDone && plan.freeze && S.t >= plan.freeze.t) {
+      S.freezeDone = true;
+      S.freezeUntil = now + plan.freeze.dur / speed;
+      var fz = $('freezeMsg');
+      fz.className = '';
+      fz.innerHTML = '<div class="fz">……（停止中）</div><div class="ring"></div>';
+      aud('stopLoop'); aud('play', 'freeze');
+      say('freeze', 0, null, 'high');
+      S.cm.frozeSaid = true;
+    }
+    var frozen = now < S.freezeUntil;
+    if (S.wasFrozen && !frozen) {
+      var fm = $('freezeMsg');
+      fm.className = 'liar';
+      fm.innerHTML = '<div class="fz">ウソです！レース続行！</div>';
+      later(function () { fm.className = 'hidden'; }, 1300 / speed);
+      aud('play', 'unfreeze'); aud('startLoop');
+      say('unfreeze', 0, null, 'high');
+      S.cm.nextAt = Math.max(S.cm.nextAt, S.t + 2200);
+    }
+    S.wasFrozen = frozen;
+
+    if (!frozen) S.t += dtReal * speed * (S.slow ? 0.3 : 1);
+    var t = S.t;
+
+    // イベント
+    while (S.ei < plan.events.length && t >= plan.events[S.ei].t) {
+      var e = plan.events[S.ei++];
+      showTelop(e.text, (e.dur + 1500) / speed);   // 大テロップは発生時刻ぴったり（音声に依存しない）
+      aud('play', e.type);
+      if (e.type === 'swap') S.flashStart = now;
+      if (PH[e.type]) say(e.type, e.runner, e.runner2, 'high');
+    }
+    if (S.telopUntil && now > S.telopUntil) { $('telop').classList.add('hidden'); S.telopUntil = 0; }
+
+    // スロー・ズーム
+    var wantSlow = (t >= plan.slowFrom) && !S.photoShot;
+    if (wantSlow !== S.slow) { S.slow = wantSlow; aud('setSlow', wantSlow); }
+    S.zoom = clamp(S.zoom + (wantSlow ? 1 : -1) * dtReal / 900, 0, 1);
+
+    // 実況（状況から生成）
+    if (!frozen) runCommentary(t, now, frozen);
+
+    // 緊張度：finalFrom から徐々に上げ、スロー中は最大、写真判定後は解放
+    var ff = finalFromOf(plan), target;
+    if (S.photoShot) target = (S.hold && now < S.hold) ? 1 : 0;
+    else if (t < ff) target = 0;
+    else if (t >= plan.slowFrom) target = 1;
+    else target = 0.2 + 0.8 * clamp((t - ff) / Math.max(1, plan.slowFrom - ff), 0, 1);
+    var k = clamp(dtReal / (target > S.tension ? 500 : 250), 0, 1);
+    S.tension += (target - S.tension) * k;
+    if (Math.abs(S.tension - S.tensionSent) > 0.02 || (target === 0 && S.tension < 0.02 && S.tensionSent !== 0)) {
+      S.tensionSent = S.tension < 0.02 ? 0 : S.tension;
+      aud('setTension', S.tensionSent);
+    }
+
+    var flash = S.flashStart >= 0 ? Math.max(0, 1 - (now - S.flashStart) / 500) : 0;
+    if (flash === 0) S.flashStart = -1;
+
+    if (rend) rend.draw(t, { zoom: S.zoom, slow: S.slow, frozen: frozen, flash: flash, tension: S.tension });
+
+    // 写真判定
+    if (!S.photoShot && t >= plan.photo.t1) {
+      S.photoShot = true;
+      // レースは等速に戻すが、音は「心音だけ」の静けさを判定の瞬間まで保つ → 判定ランプ後に解放
+      S.slow = false;
+      S.hold = now + (2400 / speed) + 1700;
+      aud('setSlow', true);
+      later(function () { aud('setSlow', false); }, (2400 / speed) + 1700);
+      var snap = null;
+      if (rend) { try { snap = rend.snapshot(); } catch (er) { logErr('snapshot: ' + er.message); } }
+      photoFinish(snap);
+    }
+
+    // ゴール通過検出
+    var newly = [];
+    for (var i = 0; i < plan.n; i++) {
+      if (!S.goaled[i] && plan.progress(i, t) >= 1) { S.goaled[i] = true; newly.push(i); }
+    }
+    if (newly.length) {
+      newly.sort(function (a, b) { return plan.finishTime[a] - plan.finishTime[b]; });
+      newly.forEach(function (k) { log.goalOrder.push(plan.names[k]); S.goalCount++; });
+      if (S.goalCount === 1) aud('play', 'cheer');
+      newly.forEach(function (k2) {
+        // 3着以降のゴールは短く実況（1・2着は写真判定の演出に任せる）
+        if (S.photoShot && !S.cm.busy && !(S.hold && now < S.hold) && plan.rankOf && plan.rankOf[k2] >= 2) say('goal', k2, null, 'normal');
+      });
+      if (S.goalCount >= plan.n) S.allGoalT = t;
+    }
+    if (S.allGoalT >= 0 && t - S.allGoalT >= 1000) showResult();
+  }
+
+  // ---------- 写真判定 ----------
+  function photoFinish(snap) {
+    var plan = S.plan, st = S;
+    var film = $('film'), cv = $('filmCv'), lamps = $('lamps').children, verdict = $('verdict');
+    if (snap) {
+      cv.width = snap.width; cv.height = snap.height;
+      try { cv.getContext('2d').drawImage(snap, 0, 0); } catch (e) { logErr('film: ' + e.message); }
+    } else { cv.width = 640; cv.height = 360; }
+    for (var i = 0; i < lamps.length; i++) lamps[i].className = '';
+    verdict.textContent = '判定中……';
+    film.classList.remove('hidden');
+    aud('play', 'shutter');
+    var diff = ((plan.photo.t1 - plan.photo.t0) / 1000).toFixed(3);
+    later(function () { lamps[0].className = 'on'; aud('play', 'lamp'); }, 400 / speed);
+    later(function () { lamps[1].className = 'on'; aud('play', 'lamp'); }, 800 / speed);
+    later(function () {
+      lamps[2].className = 'on final'; aud('play', 'lampFinal');
+      verdict.textContent = '1着 ' + plan.names[plan.photo.a] + 'さん！（ハナ差 ' + diff + '秒）';
+    }, 2400 / speed);
+    later(function () { if (S === st) film.classList.add('hidden'); }, 6200 / speed);
+  }
+
+  // ---------- 結果画面 ----------
+  function timeStr(mins) { mins = ((mins % 1440) + 1440) % 1440; return pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60); }
+
+  // 走者の見た目（renderer.looks[i]）を乗り物＋帽子＋顔で小さく添える。looks が無ければ乗り物のみ。
+  function lookHtml(i, rank) {
+    var plan = S.plan, lk = rend && rend.looks && rend.looks[i];
+    var veh = esc(plan.vehicle.emoji);
+    if (!lk) return '<span class="vh">' + veh + '</span> ';
+    var f = '';
+    if (typeof lk.hue === 'number' && isFinite(lk.hue)) f = 'hue-rotate(' + Math.round(lk.hue) + 'deg) saturate(1.3)';
+    else if (typeof lk.hue === 'string' && /^[a-z\-]+\([^;"<>]*\)(\s+[a-z\-]+\([^;"<>]*\))*$/i.test(lk.hue)) f = lk.hue;
+    var hat = typeof lk.hat === 'string' ? ({ horn: '🦄', prop: '🌀' }[lk.hat] || lk.hat) : '';
+    var face = rank === 0 ? '🥳' : (rank <= 2 ? '😄' : '😌');
+    return '<span class="vh"' + (f ? ' style="filter:' + f + '"' : '') + '>' + veh + '</span>' +
+      '<span class="lk">' + esc(hat) + esc(face) + '</span> ';
+  }
+
+  function showResult() {
+    var plan = S.plan, st = S;
+    S.phase = 'result';
+    clearTimers();
+    aud('stopLoop'); aud('setSlow', false); aud('setTension', 0); aud('cancelSpeech');
+    hideOverlays();
+    show('result');
+
+    var startMin = parseTime($('optStart').value); if (startMin === null) startMin = 13 * 60;
+    var per = parseInt($('optMin').value, 10); if (!(per >= 1)) per = 8;
+    var order = plan.order, n = plan.n;
+
+    // 表彰台
+    var pod = $('podium'); pod.innerHTML = '';
+    var medals = ['🥇', '🥈', '🥉'];
+    [1, 0, 2].filter(function (r) { return r < Math.min(n, 3); }).forEach(function (r) {
+      var d = document.createElement('div');
+      d.className = 'pod p' + (r + 1);
+      d.innerHTML = '<div class="who">' + lookHtml(order[r], r) + esc(plan.names[order[r]]) + '</div><div class="block">' + medals[r] + ' ' + (r + 1) + '</div>';
+      pod.appendChild(d);
+    });
+
+    // リスト＋タイムテーブル
+    var ol = $('orderList'); ol.innerHTML = '';
+    var rows = n > 6 ? Math.ceil(n / 2) : n;
+    ol.classList.toggle('two', n > 6);
+    ol.style.gridTemplateRows = 'repeat(' + rows + ', minmax(0, 6.2vh))';
+    var lines = [];
+    log.resultOrder.length = 0;
+    order.forEach(function (idx, k) {
+      var s = startMin + k * per, e = s + per, name = plan.names[idx];
+      var range = timeStr(s) + '〜' + timeStr(e);
+      lines.push(range + ' ' + name + 'さん');
+      log.resultOrder.push(name);
+      var li = document.createElement('li');
+      li.style.animationDelay = (0.3 + k * 0.12) + 's';
+      li.innerHTML = '<span class="rk">' + (k + 1) + '</span><span class="nm">' + lookHtml(idx, k) + esc(name) + 'さん</span><span class="tm">' + range + '</span>';
+      ol.appendChild(li);
+    });
+    st.timetable = lines.join('\n');
+
+    // 封筒
+    var env = $('envelope');
+    env.classList.remove('open');
+    env.innerHTML = '✉️ 封印の封筒を開封します……';
+    st.envOpened = false;
+    later(openEnvelope, 2200 / speed);
+
+    // 紙吹雪（少なめ・大きめ・ゆっくり）
+    var cf = $('confetti'); cf.innerHTML = '';
+    var cols = ['#ffd23f', '#ff4d6d', '#3be0ff', '#5dff9c', '#ff9f1c', '#c58bff'];
+    for (var i = 0; i < 40; i++) {
+      var c = document.createElement('i');
+      var sz = 18 + Math.random() * 14;
+      c.style.left = (Math.random() * 100) + 'vw';
+      c.style.width = sz + 'px'; c.style.height = (sz * 0.6) + 'px';
+      c.style.background = cols[i % cols.length];
+      c.style.animationDuration = (7 + Math.random() * 5) + 's';
+      c.style.animationDelay = (Math.random() * 3) + 's';
+      cf.appendChild(c);
+    }
+    aud('play', 'fanfare');
+    resultBanter(plan, st);
+    log.done = true;
+  }
+
+  // 結果画面の締めの掛け合い（読み上げのみ。画面の発表順リストが字幕の代わり）
+  function resultBanter(plan, st) {
+    var first = plan.names[plan.order[0]], lastN = plan.names[plan.order[plan.n - 1]];
+    var lines = [
+      ['ana', 'トップバッターは' + first + 'さん！'],
+      ['kai', pickOne(['いきなりですね', '準備できてますか？', '心の準備をどうぞ'])],
+      ['ana', '大トリは' + lastN + 'さん！'],
+      ['kai', pickOne(['ハードル上がりましたね', 'のんびり走った分、期待です', '最後に全部持っていく人です'])]
+    ];
+    function go(k) {
+      if (S !== st || S.phase !== 'result' || k >= lines.length) return;
+      aud('speak', lines[k][1], lines[k][0], { priority: 'high', maxWaitMs: 2000, fallbackMs: 1,
+        onend: function () { later(function () { go(k + 1); }, 150 / speed); },
+        ondrop: function () {} });
+    }
+    if (plan.n >= 2) later(function () { go(0); }, 1600 / speed);
+  }
+  function pickOne(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  function openEnvelope() {
+    if (!S || S.phase !== 'result' || S.envOpened) return;
+    S.envOpened = true;
+    var env = $('envelope');
+    env.classList.add('open');
+    env.innerHTML = '📜 封印コード <b>' + esc(S.plan.sealCode) + '</b>（レース前と同じ！）';
+    aud('play', 'tick');
+  }
+
+  function copyTimetable() {
+    if (!S || !S.timetable) return;
+    var text = S.timetable, btn = $('btnCopy');
+    function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = '📋 タイムテーブルをコピー'; }, 2200); }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      done(ok ? 'コピーしました！' : 'コピーできませんでした');
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done('コピーしました！'); }, fallback);
+      } else fallback();
+    } catch (e) { fallback(); }
+  }
+
+  // ---------- 起動 ----------
+  function startFromSetup() {
+    if (!validate()) return;
+    saveSetup();
+    beginRace(parsedNames.slice());
+  }
+
+  function init() {
+    loadSetup();
+    refreshControls();
+    validate();
+
+    $('names').addEventListener('input', function () { validate(); saveSetup(); });
+    $('optStart').addEventListener('input', function () { validate(); saveSetup(); });
+    $('optMin').addEventListener('input', function () { validate(); saveSetup(); });
+    $('optSpeech').addEventListener('change', function () { setSpeech(this.checked); });
+    $('btnStart').addEventListener('click', function () { this.blur(); startFromSetup(); });
+
+    $('btnSound').addEventListener('click', function () {
+      muted = !muted; aud('setMuted', muted); refreshControls(); this.blur();
+    });
+    $('btnSpeech').addEventListener('click', function () { setSpeech(!speechOn); this.blur(); });
+    $('btnShare').addEventListener('click', function () { $('shareNote').hidden = !$('shareNote').hidden; this.blur(); });
+
+    $('intro').addEventListener('click', function () { if (S && S.skip) S.skip(); });
+    $('envelope').addEventListener('click', openEnvelope);
+    $('btnCopy').addEventListener('click', function () { copyTimetable(); this.blur(); });
+    $('btnAgain').addEventListener('click', function () { this.blur(); if (S) beginRace(S.names.slice()); });
+    $('btnChange').addEventListener('click', function () {
+      this.blur();
+      if (S) { clearTimers(); S.phase = 'setup'; }
+      aud('stopLoop'); aud('cancelSpeech');
+      hideOverlays();
+      show('setup'); validate();
+    });
+
+    document.addEventListener('pointerdown', initAudioOnce, true);
+    document.addEventListener('keydown', initAudioOnce, true);
+
+    document.addEventListener('keydown', function (e) {
+      if (!(e.key === ' ' || e.code === 'Space' || e.key === 'Enter')) return;
+      var tag = e.target && e.target.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'BUTTON' || tag === 'SELECT') return;
+      e.preventDefault();
+      if (e.repeat) return;
+      if (currentScreen === 'setup') startFromSetup();
+      else if (currentScreen === 'race') { if (S && S.phase === 'intro' && S.skip) S.skip(); }
+      else if (currentScreen === 'result') openEnvelope();
+    });
+
+    window.addEventListener('resize', function () { if (rend) { try { rend.resize(); } catch (e) {} } });
+    window.requestAnimationFrame(frame);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  RR.App = { version: 1 };
+})();
+
+</script>
+</body>
+</html>
