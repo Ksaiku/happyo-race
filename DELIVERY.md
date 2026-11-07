@@ -71,11 +71,11 @@ GitHub 公開の**手前**で止めています（push・リポジトリ作成�
 - 読み上げは Windows の「Microsoft Haruka / Ayumi / Ichiro」など PC 内蔵の音声のみを使います。Edge のオンライン音声（Natural 系）は外部通信になるため意図的に使っていません。
 - 自動テストでは「音が実際に鳴るか」「Teams 越しの見え方」は確認できていません（2章の手順で確認してください）。
 
-## 5. OK を出したあとの GitHub 公開手順（未実行）
+## 5. GitHub 公開手順（2026-11-08 実施済み：https://github.com/Ksaiku/happyo-race ／ Pages：https://ksaiku.github.io/happyo-race/dist/）
 GitHub で空のリポジトリ（例：`happyo-race`、Public、README なし）を作ってから：
 
 ```bash
-cd D:/desktop/python/roulette
+cd （このフォルダ）
 git init -b main
 echo claude-code-prompt.md >> .gitignore   # 依頼文を公開しない場合（git add より前に）
 git add .

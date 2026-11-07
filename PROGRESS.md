@@ -22,7 +22,7 @@
 - [x] イベント対象を全順位に（1着も転ぶ）
 - [x] README / LICENSE / DELIVERY / screenshots / 公開前チェック
 
-## 状態：納品済み（GitHub公開は未実施。DELIVERY.md 5章の手順で本人が実行）
+## 状態：納品済み・GitHub 公開済み（2026-11-08）
 
 ## v2（2026-11-07 ユーザー要望）
 要望：①実況の文字・音声・レース状況のズレ解消 ②緊迫感 ③走者ごとの見た目の個性。設計は SPEC.md 末尾「v2 変更」。
@@ -32,3 +32,9 @@
 - [x] 統合 → core/E2E テスト ALL PASS → スクショ確認（ラストスパート帯が走者を隠す件を修正）→ README/DELIVERY 更新
 - 注意: C: ドライブ空き0。テスト時は TEMP/TMP を scratch/tmp に向ける
 - [x] v3 ユーモア実況（ボケ＋ツッコミ、結果画面の締め、レース26〜29秒）→ core/E2E ALL PASS・字幕突き合わせ一致
+
+## 2026-11-08 公開と次の段取り
+- [x] GitHub 公開（Public＋Pages）。コミットのメールは noreply
+- [x] 新セッション向け準備：CLAUDE.md 追加、字幕突き合わせを test/subs-check.js に移動（`npm run subs`）、scratch の旧ファイルを scratch/archive-v3/ へ
+- [ ] 次：別セッションで修正点を洗い出して ISSUES.md にまとめる → ユーザーが優先度を決める → 改善
+- 未確認のまま：実機スピーカーでの音・読み上げ、Teams 越しの見え方、緊迫感の音量バランス
