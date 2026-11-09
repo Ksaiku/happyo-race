@@ -187,7 +187,7 @@ var RUNS_PER_N = 200;
 var lead = {};
 [2, 6, 8, 10, 12].forEach(function (n) {
   var nm = names(n), errs = [], evCnt = {}, frz = 0, notLeadA = 0, notLeadB = 0, types = {};
-  var tag = {}, lc2 = 0, lcSum = 0, dg = [], packTop = [], i;
+  var tag = {}, lc2 = 0, lcSum = 0, dg = [], packTop = [], i, stallN = 0, stallEx = '', packSlowN = 0, decEx0 = '', w75 = [];
   for (var r = 0; r < RUNS_PER_N; r++) {
     var plan = Core.planRace(nm, { seed: nextSeed() });
     var es = validate(plan, nm);
@@ -201,6 +201,26 @@ var lead = {};
     var lo = 0.6 * plan.photo.t0, cnt = plan.leadChanges.filter(function (c) { return c.t >= lo; }).length;
     if (cnt >= 2) lc2++;
     lcSum += cnt;
+    // v4.2: 理由なく遅くならない。イベントを除いた走りの速さ（0.25秒幅）は、スタートの加速が終わってから
+    //   スロー直前まで一度も下がらない（0.5% まで許容）。遅すぎて止まって見えることもない（その人の平均の 0.4 倍以上）
+    var minV = 9, minAt = 0, decEx = '';
+    for (i = 0; i < n; i++) {
+      var Ti = plan.finishTime[i], vmax = 0;
+      for (var ts = 1500; ts < Math.min(Ti, plan.slowFrom) - 200; ts += 100) {
+        var vv = (plan.baseProgress(i, ts + 125) - plan.baseProgress(i, ts - 125)) / 250 * Ti;
+        if (vv < minV) { minV = vv; minAt = ts; }
+        if (vv < vmax * 0.995 && !decEx) decEx = 'runner ' + i + ' ' + vmax.toFixed(2) + '->' + vv.toFixed(2) + ' at ' + (ts / plan.raceEnd * 100).toFixed(0) + '%';
+        vmax = Math.max(vmax, vv);
+      }
+    }
+    if (minV < 0.4) { stallN++; if (!stallEx) stallEx = 'race ' + r + ' v=' + minV.toFixed(2) + ' at ' + (minAt / plan.raceEnd * 100).toFixed(0) + '%'; }
+    if (decEx) { packSlowN++; if (!decEx0) decEx0 = 'race ' + r + ' ' + decEx; }
+    // v4.2: レースの75%で横一線に並ばない（4人以上）
+    if (n >= 4) {
+      var p75 = [];
+      for (i = 0; i < n; i++) p75.push(plan.baseProgress(i, 0.75 * plan.photo.t0));
+      w75.push(Math.max.apply(null, p75) - Math.min.apply(null, p75));
+    }
     // v4: 中盤はばらける（全員の幅・隣どうしの平均間隔）。終盤の入り口では優勝争いの上位 kC 人が固まる
     if (n >= 4) {
       var tm = 0.5 * plan.photo.t0, pr = [];
@@ -220,13 +240,20 @@ var lead = {};
   var lcRate = lc2 / RUNS_PER_N;
   report(lcRate >= 0.8, 'n=' + n + ' lead changes >=2 in last 40%',
     (lcRate * 100).toFixed(1) + '% of races (avg ' + (lcSum / RUNS_PER_N).toFixed(2) + ' changes), need >=80%');
+  report(stallN === 0, 'n=' + n + ' v4.2 nobody looks stopped (base speed >= 0.4x own average)', stallN ? stallN + ' races, e.g. ' + stallEx : 'all ' + RUNS_PER_N + ' races');
+  report(packSlowN === 0, 'n=' + n + ' v4.2 nobody slows down without an event (base speed never decreases)', packSlowN ? packSlowN + ' races, e.g. ' + decEx0 : 'all ' + RUNS_PER_N + ' races');
+  if (n >= 4) {
+    var m75 = 0; w75.forEach(function (d) { m75 += d / w75.length; });
+    report(m75 >= 0.1, 'n=' + n + ' v4.2 field is not lined up at 75%', 'width at 0.75*t0 mean=' + m75.toFixed(3) + ' (>=0.1)');
+  }
   if (n >= 4) {
     var mw = 0, ma = 0, mp = 0;
     dg.forEach(function (d) { mw += d.width / dg.length; ma += d.adj / dg.length; });
     packTop.forEach(function (d) { mp += d / packTop.length; });
-    // コース約1350pxで換算：幅0.2=270px、隣どうし0.025=34px、優勝争い0.05=68px
-    report(mw >= 0.2 && ma >= 0.025, 'n=' + n + ' v4 field spreads out mid-race (not bunched)',
-      'width mean=' + mw.toFixed(3) + ' (>=0.2) adjacent mean=' + ma.toFixed(3) + ' (>=0.025)');
+    // コース約1350pxで換算：幅0.2=270px、隣どうし0.02=27px、優勝争い0.05=68px
+    // v4.2：速さを下げない作りにしたため、隣どうしの基準を 0.025 → 0.02 に（12人で幅0.22＝隣どうし約28px）
+    report(mw >= 0.2 && ma >= 0.02, 'n=' + n + ' v4 field spreads out mid-race (not bunched)',
+      'width mean=' + mw.toFixed(3) + ' (>=0.2) adjacent mean=' + ma.toFixed(3) + ' (>=0.02)');
     report(mp <= 0.05, 'n=' + n + ' v4 title contenders bunch up in the final', 'top-k range at finalFrom+1s mean=' + mp.toFixed(3) + ' (<=0.05)');
   }
 });

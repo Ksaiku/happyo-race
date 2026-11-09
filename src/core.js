@@ -110,8 +110,8 @@ RR.Core = (function () {
     photo:  ['{n}か！{m}か！', '{n}と{m}、並んだ！']
   };
 
-  // 走りのばらけ具合（v4）。mid=中盤のずれの大きさ、backDrift/back/backGap=優勝争い以外の後方の間隔、minSlow=終盤入りで落とせる速さの下限
-  var SPREAD = { mid: 0.2, backDrift: 0.015, back: 1.3, backGap: 0.02, minSlow: 0.12, packJitter: 0.012 };
+  // 走りの調整値（v4.2）。startMs=スタートの加速にかかる時間、minEarly=スパート前の速さの下限（その人の平均の速さに対する比。遅すぎて止まって見えないように）
+  var SPREAD = { startMs: 1200, minEarly: 0.4 };
 
   // ---------------------------------------------------------------- helpers
   function w(x) { return x >= 1 ? 0 : (x <= 0 ? 1 : 0.5 * (1 + Math.cos(Math.PI * x))); }
@@ -177,124 +177,107 @@ RR.Core = (function () {
     var weather = pick(WEATHERS, rng);
 
     // ---- base curves (monotone, 0 -> 1 exactly at finishTime)
+    // v4.2: 理由なく遅くならない走り。各自の速さは「スタートの加速」と「スパート（最大2回）」でだけ変わり、一度も下がらない。
+    //   遅くなる・止まる・戻るのはイベント（転倒・逆走など）のときだけ。
+    //   中盤のばらけは「最初から速い人（逃げ）」と「最初はゆっくりで後からスパートする人（差し・追い込み）」の差で作る。
+    //   条件（最後の2秒は1着・2着が並んで先頭、2着が一度前に出る など）を満たすまで、スパートの位置と強さを引き直す。
     var K = 600;
     var tables = new Array(n);
-    // v4: 位置のずれ D(u) を「0 から始まり、終盤の入り口(tA)で目標値に戻る」波で作る。
-    //   中盤は大きくばらけ（逃げ・差し・追い込み）、tA で優勝争いの kC 人は同じ位置に、それより下は着順どおり後ろに並ぶ。
-    //   速度 = 1 + D'(u)。0.15 未満にしない（単調増加を保つ）。
-    var tA0 = t0 - 9500;
-    function buildTable(i) {
-      var T = finishTime[i];
-      var uA = Math.min(0.95, tA0 / T);
-      var M = SPREAD.mid;
-      var r1 = rng(), r2 = rng(), r3 = rng();
-      var A1;
-      if (i === a) A1 = M * (-1 + 1.4 * r1);          // 1着：やや後ろ寄りだが、先行する回もある
-      else if (i === b) A1 = M * (-0.4 + 1.4 * r1);   // 2着：やや前寄り
-      else A1 = M * (2 * r1 - 1);
-      var A2 = M * 0.27 * (2 * r2 - 1), A3 = M * 0.1 * (2 * r3 - 1);
-      var dl = rankOf[i] >= kC ? -SPREAD.backDrift * (rankOf[i] - kC + 1) : SPREAD.packJitter * (2 * rng() - 1);
-      function v(u) {
-        if (u >= uA) return 1;
-        var x = u / uA, w = Math.PI / uA;
-        var d = A1 * w * Math.cos(Math.PI * x) + A2 * 2 * w * Math.cos(2 * Math.PI * x) + A3 * 3 * w * Math.cos(3 * Math.PI * x);
-        d += dl * 6 * x * (1 - x) / uA;
-        return Math.max(0.15, 1 + d);
+    var finalFrom = Math.round(t0 - 5000);
+    var NI = 2 * K;
+    function sstep(x) { return x <= 0 ? 0 : (x >= 1 ? 1 : x * x * (3 - 2 * x)); }
+    function uni(lo, hi) { return lo + (hi - lo) * rng(); }
+    // 速さ v(t) = スタートの加速 × (1 + k1·スパート1 + k2·スパート2)。k1, k2 >= 0 なので v は下がらない
+    function buildProfile(T, P) {
+      var F = new Float64Array(NI + 1), dt = T / NI, prev = 0, j2;
+      function vel(t) {
+        return sstep(t / SPREAD.startMs) * (1 + P.k1 * sstep((t - P.s1) / P.d1) + P.k2 * sstep((t - P.s2) / P.d2));
       }
-      var P = new Float64Array(K + 1);
-      var prev = v(0);
-      for (var k = 1; k <= K; k++) {
-        var cur = v(k / K);
-        P[k] = P[k - 1] + (prev + cur) * 0.5 / K;
+      for (j2 = 1; j2 <= NI; j2++) {
+        var cur = vel(j2 * dt);
+        F[j2] = F[j2 - 1] + (prev + cur) * 0.5 * dt;
         prev = cur;
       }
-      var Z = P[K];
-      for (k = 0; k <= K; k++) P[k] /= Z;
-      P[K] = 1;
+      var tb = new Float64Array(K + 1);
+      for (j2 = 0; j2 <= K; j2++) tb[j2] = F[j2 * 2] / F[NI];
+      tb[K] = 1;
+      return { tb: tb, early: T / F[NI] };   // early = 加速後・スパート前の速さ（その人の平均の速さに対する比）
+    }
+    function drawParams(q) {
+      var T = finishTime[q], P = {};
+      if (q === a) {
+        // 1着：多くは後方から。中盤の追い上げ＋最後の約2秒の決め手（スロー中に2着を差す）
+        var closer = n === 2 ? rng() < 0.7 : rng() < 0.8;
+        P.k1 = closer ? uni(0.5, 1.5) : uni(0, 0.15); P.s1 = uni(0.45, 0.65) * T; P.d1 = uni(2500, 6000);
+        P.k2 = uni(0.3, 0.7); P.s2 = T - uni(1500, 2600); P.d2 = uni(700, 1400);
+      } else if (q === b) {
+        // 2着：一足早いスパートで前に出て、最後に1着に差される
+        P.k1 = uni(0, 0.8); P.s1 = uni(0.3, 0.65) * T; P.d1 = uni(2500, 6000);
+        P.k2 = uni(0.1, 0.4); P.s2 = T - uni(3500, 6500); P.d2 = uni(1500, 3000);
+      } else {
+        // 走り方：逃げ（最初から速く一定）・先行・差し・追い込み（最初はゆっくり、中盤以降に大きくスパート）
+        var st = rng();
+        if (st < 0.3) { P.k1 = uni(0, 0.1); P.s1 = uni(0.3, 0.6) * T; }
+        else if (st < 0.55) { P.k1 = uni(0.15, 0.4); P.s1 = uni(0.3, 0.55) * T; }
+        else if (st < 0.75) { P.k1 = uni(0.5, 1.0); P.s1 = uni(0.45, 0.6) * T; }
+        else { P.k1 = uni(1.5, 2.6); P.s1 = uni(0.5, 0.65) * T; }
+        P.d1 = uni(2500, 6000);
+        P.k2 = uni(0, 0.4); P.s2 = T - uni(3000, 9000); P.d2 = uni(1000, 3000);
+      }
       return P;
     }
-    var oldTables = new Array(n);
-    for (q = 0; q < n; q++) oldTables[q] = buildTable(q);
     function tabAt(tb, T, t) {
       if (t <= 0) return 0;
       if (t >= T) return 1;
-      var x = t / T * K, k = Math.floor(x);
-      if (k >= K) k = K - 1;
-      return tb[k] + (tb[k + 1] - tb[k]) * (x - k);
+      var x = t / T * K, k2 = Math.floor(x);
+      if (k2 >= K) k2 = K - 1;
+      return tb[k2] + (tb[k2 + 1] - tb[k2]) * (x - k2);
     }
-
-    // ---- endgame pack: everybody bunches up by finalFrom, stays tangled (lead rotates) until ~3s before the
-    //      winner finishes, then the field spreads out in finishing order. Built by re-fitting the base curves.
-    var finalFrom = Math.round(t0 - 5000);
-    var tG = finalFrom + 2000;
-    var tA = finalFrom - 4500;
-    var gF = 0.28;
-    var sumOld = 0, sumE = 0, j;
-    for (q = 0; q < n; q++) { sumOld += tabAt(oldTables[q], finishTime[q], finalFrom); sumE += finishTime[q] - t0; }
-    var vf = (1 - sumOld / n) / (5000 + gF * sumE / n);   // pack speed (progress per ms)
-    vf = Math.min(0.0002, Math.max(0.000035, vf));
-    var Lc = 1 - 5000 * vf;                                  // winner's straight line at finalFrom
-    var knotT = [finalFrom, finalFrom + 700, finalFrom + 1400, tG];
-    var p0 = [], vi = [];
-    for (q = 0; q < n; q++) {
-      var Tq = finishTime[q];
-      var oa = tabAt(oldTables[q], Tq, tA);
-      // 優勝争いの kC 人は団子に、それより下は着順どおりに間隔をあけて後ろに並べる
-      var back = rankOf[q] >= kC;
-      var pp = Lc - (back ? SPREAD.back : gF) * (Tq - t0) * vf - (back ? SPREAD.backGap * (rankOf[q] - kC + 1) : 0);
-      pp = Math.max(oa + SPREAD.minSlow * vf * 4500, Math.min(oa + 2.2 * vf * 4500, pp));
-      pp = Math.min(pp, 1 - 0.3 * vf * (Tq - finalFrom));
-      p0.push(pp);
-      vi.push((1 - pp) / (Tq - finalFrom));
+    function scoreField(tbs) {
+      var at = function (q2, t) { return tabAt(tbs[q2], finishTime[q2], t); };
+      // 必須：最後の2秒、1着・2着が並んで（0.025以内）先頭、2着が一度は前に出る
+      var bAhead = false, tt, q2;
+      for (tt = t0 - 2000; tt < t0; tt += 20) {
+        var pa = at(a, tt), pb = at(b, tt), mx = Math.max(pa, pb);
+        if (pb > pa + 0.0005) bAhead = true;
+        if (Math.abs(pa - pb) > 0.025) return -1;
+        for (q2 = 0; q2 < n; q2++) if (q2 !== a && q2 !== b && at(q2, tt) > mx - 0.002) return -1;
+      }
+      if (!bAhead) return -1;
+      var sc = 0;
+      // 後半40%の先頭交代 2回以上
+      var lead = function (t) { var bq = 0, bv = -1; for (var q3 = 0; q3 < n; q3++) { var v = at(q3, t); if (v > bv) { bv = v; bq = q3; } } return bq; };
+      var lc = 0, prevL = lead(0.6 * t0);
+      for (tt = 0.6 * t0 + 100; tt <= t0; tt += 100) { var L2 = lead(tt); if (L2 !== prevL) { lc++; prevL = L2; } }
+      if (lc >= 2) sc++;
+      // 中盤（1着ゴールの半分の時刻）の先頭は1着でないことが多い
+      if (lead(0.5 * t0) !== a) sc++;
+      if (n >= 4) {
+        // 中盤はばらける（幅 0.2 以上）、終盤入り＋1秒で優勝争いは 0.05 以内
+        var pr = [], top = [];
+        for (q2 = 0; q2 < n; q2++) pr.push(at(q2, 0.5 * t0));
+        if (Math.max.apply(null, pr) - Math.min.apply(null, pr) >= 0.2) sc++;
+        for (q2 = 0; q2 < kC; q2++) top.push(at(order[q2], finalFrom + 1000));
+        if (Math.max.apply(null, top) - Math.min.apply(null, top) <= 0.05) sc++;
+      } else sc += 2;
+      return sc;
     }
-    var aBehind = n >= 3 && rng() < 0.55;                    // winner sometimes strikes from the back in the last 3s
-    var danceBase = order.slice(0, kC);
-    var dance = aBehind ? danceBase.slice(1) : danceBase;
-    var seq = [], prevC = -1;
-    for (j = 0; j < 3; j++) {
-      // v4: 先頭交代を減らす（実況が追いつくように）。最初の2つは同じ人が先頭、3つ目は1着か2着が先頭で一騎打ちへ
-      if (j === 1) { seq.push(prevC); continue; }
-      var cand = (j === 2 ? [a, b] : dance).filter(function (x) { return x !== prevC; });
-      prevC = cand[Math.floor(rng() * cand.length)];
-      seq.push(prevC);
-    }
-    var amp = vf * 250;
-    var vals = [];
-    for (j = 0; j < 4; j++) {
-      var row = [];
+    var bestTabs = null, bestSc = -2, attempt;
+    var curTabs = new Array(n), curEarly = new Array(n);
+    for (attempt = 0; attempt < 120 && bestSc < 4; attempt++) {
       for (q = 0; q < n; q++) {
-        var base = p0[q] + vi[q] * (knotT[j] - finalFrom);
-        row.push(j < 3 ? base + (rng() * 2 - 1) * amp : base);
+        // 1着・2着は毎回引き直す。ほかは最初の1回と、たまに引き直す
+        if (attempt === 0 || q === a || q === b || rng() < 0.3) {
+          var pf, tries = 0;
+          do { pf = buildProfile(finishTime[q], drawParams(q)); tries++; } while (pf.early < SPREAD.minEarly && tries < 20);
+          curTabs[q] = pf.tb; curEarly[q] = pf.early;
+        }
       }
-      if (aBehind) row[a] -= vf * (j < 3 ? 250 + 200 * rng() : 200 + 80 * rng());
-      if (j < 3) {
-        var cc = seq[j], M = -1;
-        for (q = 0; q < n; q++) if (q !== cc && row[q] > M) M = row[q];
-        if (row[cc] < M + vf * 40) row[cc] = M + vf * (40 + 60 * rng());
-      } else {
-        // 最後の約3秒は1着・2着の一騎打ち：ほかの優勝争いは少し後ろに下げる
-        if (row[b] > row[a] + vf * 250) row[b] = row[a] + vf * 250;
-        if (row[b] < row[a] - vf * 250) row[b] = row[a] - vf * 250;
-        var lim = Math.min(row[a], row[b]) - vf * 300;
-        for (q = 0; q < n; q++) if (q !== a && q !== b && row[q] > lim) row[q] = lim;
-      }
-      vals.push(row);
+      var s = scoreField(curTabs);
+      if (s > bestSc) { bestSc = s; bestTabs = curTabs.slice(); }
     }
-    for (q = 0; q < n; q++) {
-      var T2 = finishTime[q], X = [], Y = [], kk;
-      var kA = Math.floor(tA * K / T2);
-      for (kk = 0; kk <= kA; kk++) { X.push(T2 * kk / K); Y.push(oldTables[q][kk]); }
-      var pX = X[X.length - 1], pY = Y[Y.length - 1];
-      for (j = 0; j < 4; j++) {
-        var yv = vals[j][q];
-        var minInc = 0.2 * vi[q] * (knotT[j] - pX);
-        if (yv < pY + minInc) yv = pY + minInc;
-        yv = Math.min(yv, 1 - 0.1 * vi[q] * (T2 - knotT[j]));
-        X.push(knotT[j]); Y.push(yv); pX = knotT[j]; pY = yv;
-      }
-      X.push(T2); Y.push(1);
-      tables[q] = pchipTable(X, Y, T2, K);
-    }
+    if (!bestTabs) bestTabs = curTabs.slice();
+    for (q = 0; q < n; q++) tables[q] = bestTabs[q];
 
     function bprog(i, t) {
       var T = finishTime[i];
@@ -442,13 +425,6 @@ RR.Core = (function () {
     events.sort(function (x, y) { return x.t - y.t; });
 
     // ---- progress
-    function finale(i, t) {
-      if (t <= t0 - 2000 || t >= t0 - 200) return 0;
-      var s = Math.sin(Math.PI * (t - (t0 - 2000)) / 1800);
-      s *= s;
-      return i === a ? -vf * 120 * s : vf * 350 * s;
-    }
-
     function progress(i, t) {
       var T = finishTime[i];
       if (t <= 0) return 0;
@@ -458,7 +434,6 @@ RR.Core = (function () {
         var e = effects[k];
         if (e.r === i || e.r2 === i) p += e.off(i, t);
       }
-      if (i === a || i === b) p += finale(i, t);
       return p < 0 ? 0 : (p > 0.999 ? 0.999 : p);
     }
 
